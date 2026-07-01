@@ -1,7 +1,9 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import React, { useEffect, useRef, useState } from "react";
+import type { ApplicationVerifier, ConfirmationResult } from "firebase/auth";
+import type { FC } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -12,10 +14,8 @@ import {
 	Text,
 	View,
 } from "react-native";
-
 import { sendOtp, verifyOtp } from "../api/auth";
 import { OtpInput } from "../components/OtpInput";
-import { ERROR_MESSAGES } from "../constants/error.constants";
 import { RESEND_SEC } from "../constants/otp.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
@@ -26,18 +26,22 @@ import { sanitizePhoneNumber } from "../utils/phone.utils";
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, "Otp"> };
 
-const country_code: string = default_country?.code;
+const country_code = default_country.code;
 
-export const OtpScreen: React.FC<Props> = ({ navigation }) => {
+export const OtpScreen: FC<Props> = ({ navigation }) => {
 	const [otp, setOtp] = useState("");
 	const [countdown, setCountdown] = useState(RESEND_SEC);
 	const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
 	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const { confirmation, phone, setUser, setConfirmation } = useAuthStore();
 
-	const { mutate: resend, isPending: resending } = useMutation({
+	const { mutate: resend, isPending: resending } = useMutation<
+		ConfirmationResult,
+		Error,
+		{ phone: string; recaptchaVerifier: ApplicationVerifier }
+	>({
 		mutationFn: sendOtp,
-		onSuccess: (c) => {
+		onSuccess: (c: ConfirmationResult) => {
 			setConfirmation(c);
 			setOtp("");
 			startTimer();
@@ -46,7 +50,7 @@ export const OtpScreen: React.FC<Props> = ({ navigation }) => {
 	});
 
 	// Countdown
-	const startTimer = React.useCallback(() => {
+	const startTimer = useCallback(() => {
 		// clear existing timer if any
 		if (timerRef.current) {
 			clearInterval(timerRef.current);
@@ -80,16 +84,15 @@ export const OtpScreen: React.FC<Props> = ({ navigation }) => {
 		};
 	}, [startTimer]);
 
-	const handeResendOtp = () => {
-		if (!recaptchaRef) {
-			return Alert.alert("Error", ERROR_MESSAGES.RECAPTCHA_ERROR);
-		}
+	const handleResendOtp = () => {
 		const recaptchaVerifier = recaptchaRef.current;
 		if (!recaptchaVerifier) {
-			return Alert.alert("Error", ERROR_MESSAGES.RECAPTCHA_ERROR);
+			return Alert.alert("Error", "Recaptcha is not ready yet.");
 		}
+
 		resend({
 			phone: sanitizePhoneNumber(country_code, phone),
+			recaptchaVerifier,
 		});
 	};
 
@@ -116,10 +119,7 @@ export const OtpScreen: React.FC<Props> = ({ navigation }) => {
 	}, [otp, confirmation, verifying, verify]);
 
 	const maskedPhone = phone
-		? phone.replace(
-				/(\+\d{1,3})(\d+)(\d{4})/,
-				(_, a, b, c) => `${a}${"•".repeat(b.length)}${c}`,
-			)
+		? phone.replace(/(\+\d{1,3})(\d+)(\d{4})/, (_, a, b, c) => `${a}${"•".repeat(b.length)}${c}`)
 		: "";
 
 	return (
@@ -183,9 +183,7 @@ export const OtpScreen: React.FC<Props> = ({ navigation }) => {
 							className="flex-row items-center justify-center bg-violet-50 rounded-xl p-3"
 							style={{ gap: 8 }}
 						>
-							<Text className="text-violet-600 text-sm font-medium">
-								Checking your code…
-							</Text>
+							<Text className="text-violet-600 text-sm font-medium">Checking your code…</Text>
 						</View>
 					)}
 
@@ -194,21 +192,18 @@ export const OtpScreen: React.FC<Props> = ({ navigation }) => {
 						<Text className="text-slate-500 text-sm">Didn't get a code?</Text>
 						{countdown > 0 ? (
 							<Text className="text-slate-400 text-sm">
-								Resend in{" "}
-								<Text className="font-bold text-violet-500">{countdown}s</Text>
+								Resend in <Text className="font-bold text-violet-500">{countdown}s</Text>
 							</Text>
 						) : (
 							<Pressable
-								onPress={() => handeResendOtp()}
+								onPress={handleResendOtp}
 								disabled={resending}
 								className="px-4 py-1.5 rounded-full bg-violet-50"
 							>
 								{resending ? (
 									<ActivityIndicator size="small" color="#7c3aed" />
 								) : (
-									<Text className="text-violet-600 font-semibold text-sm">
-										Resend OTP
-									</Text>
+									<Text className="text-violet-600 font-semibold text-sm">Resend OTP</Text>
 								)}
 							</Pressable>
 						)}

@@ -1,8 +1,9 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import type React from "react";
-import { useRef, useState } from "react";
+import type { ApplicationVerifier, ConfirmationResult } from "firebase/auth";
+import type { FC } from "react";
+import React, { useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -17,30 +18,32 @@ import {
 } from "react-native";
 import { sendOtp } from "../api/auth";
 import { TransitHero } from "../components/TrainBusHero";
-import { ERROR_MESSAGES } from "../constants/error.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
 import { colors, radius, spacing, typography } from "../constants/theme";
 import app from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useAuthStore } from "../store/authStore";
-// import { handleRecaptcha } from "../utils/errorhandler.utils";
 import { sanitizePhoneNumber, validatePhoneNumber } from "../utils/phone.utils";
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, "Phone"> };
 
-const country_code: string = default_country?.code;
+const country_code = default_country.code;
 
-export const PhoneScreen: React.FC<Props> = ({ navigation }) => {
+export const PhoneScreen: FC<Props> = ({ navigation }) => {
 	const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
 	const [phone, setPhone] = useState("");
 	const { setConfirmation, setPhone: storePhone } = useAuthStore();
 
-	const { mutate, isPending } = useMutation({
+	const { mutate, isPending } = useMutation<
+		ConfirmationResult,
+		Error,
+		{ phone: string; recaptchaVerifier: ApplicationVerifier }
+	>({
 		mutationFn: sendOtp,
-		onSuccess: (confirmation) => {
+		onSuccess: (confirmation: ConfirmationResult, variables) => {
 			setConfirmation(confirmation);
-			storePhone(`${country_code}${phone}`);
+			storePhone(variables.phone);
 			navigation.navigate("Otp");
 		},
 		onError: (e: Error) => Alert.alert("Error", e.message),
@@ -49,15 +52,14 @@ export const PhoneScreen: React.FC<Props> = ({ navigation }) => {
 	const canSend = validatePhoneNumber(phone, country_code);
 
 	const handleSendOtp = () => {
-		if (!recaptchaRef) {
-			return Alert.alert("Error", ERROR_MESSAGES.RECAPTCHA_ERROR);
-		}
 		const recaptchaVerifier = recaptchaRef.current;
 		if (!recaptchaVerifier) {
-			return Alert.alert("Error", ERROR_MESSAGES.RECAPTCHA_ERROR);
+			return Alert.alert("Error", "Recaptcha is not ready yet.");
 		}
+
 		mutate({
 			phone: sanitizePhoneNumber(country_code, phone),
+			recaptchaVerifier,
 		});
 	};
 
@@ -115,9 +117,7 @@ export const PhoneScreen: React.FC<Props> = ({ navigation }) => {
 						{isPending ? (
 							<ActivityIndicator color={colors.navyDeep} />
 						) : (
-							<Text
-								style={[styles.otpBtnText, !canSend && styles.otpBtnTextDisabled]}
-							>
+							<Text style={[styles.otpBtnText, !canSend && styles.otpBtnTextDisabled]}>
 								Send OTP →
 							</Text>
 						)}

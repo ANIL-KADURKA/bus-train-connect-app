@@ -6,12 +6,13 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!package-lock.json"]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
-		"indentWidth": 4,
+		"indentWidth": 2,
 		"lineWidth": 100
 	},
 	"linter": {
@@ -24,9 +25,9 @@
 		}
 	},
 	"javascript": {
+		"jsxRuntime": "reactClassic",
 		"formatter": {
-			"quoteStyle": "double",
-			"semicolons": "always"
+			"quoteStyle": "double"
 		}
 	},
 	"assist": {

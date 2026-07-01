@@ -181,13 +181,7 @@ const TrainSvg: React.FC = () => (
 		{/* Front cab */}
 		<Rect x={108} y={6} width={18} height={28} rx={5} fill="#1E3858" />
 		<Path d="M108 8 Q120 7 126 14 L126 24 Q120 26 108 26 Z" fill="#5AB8E0" opacity={0.85} />
-		<Path
-			d="M115 8 Q122 8 126 14"
-			stroke="#3A9ACC"
-			strokeWidth={0.7}
-			fill="none"
-			opacity={0.5}
-		/>
+		<Path d="M115 8 Q122 8 126 14" stroke="#3A9ACC" strokeWidth={0.7} fill="none" opacity={0.5} />
 		<Rect x={118} y={9} width={8} height={4} rx={2} fill="#FFF5CC" />
 		<Ellipse cx={122} cy={11} rx={3} ry={1.5} fill="#FFE066" opacity={0.7} />
 		<Rect x={118} y={15} width={8} height={2.5} rx={1} fill={colors.amber} />
@@ -213,27 +207,11 @@ const TrainSvg: React.FC = () => (
 		))}
 		{/* Coach dividers */}
 		{[29, 51, 73, 95].map((x) => (
-			<Rect
-				key={`train-divider-${x}`}
-				x={x}
-				y={6}
-				width={2}
-				height={28}
-				rx={1}
-				fill="#1A2E3A"
-			/>
+			<Rect key={`train-divider-${x}`} x={x} y={6} width={2} height={28} rx={1} fill="#1A2E3A" />
 		))}
 		{/* Doors */}
 		{[27, 49, 71, 93].map((x) => (
-			<Rect
-				key={`train-door-${x}`}
-				x={x}
-				y={18}
-				width={4}
-				height={14}
-				rx={1}
-				fill="#1A2E3A"
-			/>
+			<Rect key={`train-door-${x}`} x={x} y={18} width={4} height={14} rx={1} fill="#1A2E3A" />
 		))}
 		{/* Pantograph */}
 		<Line x1={60} y1={6} x2={55} y2={0} stroke="#7AAABB" strokeWidth={1.2} />
@@ -359,16 +337,12 @@ export const TransitHero: React.FC<TransitHeroProps> = ({ height = 150, style })
 			<View style={[styles.rail, { bottom: 28 }]} />
 
 			{/* Bus (road level, above rails visually) */}
-			<Animated.View
-				style={[styles.vehicle, { bottom: 36, transform: [{ translateX: busX }] }]}
-			>
+			<Animated.View style={[styles.vehicle, { bottom: 36, transform: [{ translateX: busX }] }]}>
 				<BusSvg />
 			</Animated.View>
 
 			{/* Train (rail level) */}
-			<Animated.View
-				style={[styles.vehicle, { bottom: 28, transform: [{ translateX: trainX }] }]}
-			>
+			<Animated.View style={[styles.vehicle, { bottom: 28, transform: [{ translateX: trainX }] }]}>
 				<TrainSvg />
 			</Animated.View>
 		</View>

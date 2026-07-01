@@ -1,6 +1,6 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { signOut } from "firebase/auth";
-import type React from "react";
+import React from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { auth } from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
@@ -16,8 +16,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 			await signOut(auth);
 			reset();
 			navigation.replace("Phone");
-		} catch (e: any) {
-			Alert.alert("Error", e.message);
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : "Something went wrong.";
+			Alert.alert("Error", message);
 		}
 	};
 
@@ -43,10 +44,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
 			{/* Cards */}
 			<View className="px-6 pt-8" style={{ gap: 12 }}>
-				<View
-					className="bg-slate-50 border border-slate-100 rounded-2xl p-4"
-					style={{ gap: 4 }}
-				>
+				<View className="bg-slate-50 border border-slate-100 rounded-2xl p-4" style={{ gap: 4 }}>
 					<Text className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
 						User ID
 					</Text>
@@ -59,10 +57,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 					</Text>
 				</View>
 
-				<View
-					className="bg-slate-50 border border-slate-100 rounded-2xl p-4"
-					style={{ gap: 4 }}
-				>
+				<View className="bg-slate-50 border border-slate-100 rounded-2xl p-4" style={{ gap: 4 }}>
 					<Text className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
 						Phone
 					</Text>
@@ -82,9 +77,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 						<Text className="text-xs font-semibold text-violet-400 uppercase tracking-widest">
 							Auth provider
 						</Text>
-						<Text className="text-violet-700 font-semibold text-sm">
-							Firebase Phone Auth
-						</Text>
+						<Text className="text-violet-700 font-semibold text-sm">Firebase Phone Auth</Text>
 					</View>
 				</View>
 			</View>

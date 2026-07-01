@@ -1,7 +1,8 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { User } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 import { auth } from "../lib/firebase";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -22,7 +23,7 @@ export const RootNavigator = () => {
 
 	// Keep Zustand in sync with Firebase auth state
 	useEffect(() => {
-		const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+		const unsub = onAuthStateChanged(auth, (u: User | null) => setUser(u));
 		return unsub;
 	}, [setUser]);
 

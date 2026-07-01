@@ -1,5 +1,4 @@
-import type React from "react";
-import { useRef } from "react";
+import React, { useRef } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
 const OTP_LEN = 6;
