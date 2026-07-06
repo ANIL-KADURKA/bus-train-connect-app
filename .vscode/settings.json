@@ -6,5 +6,17 @@
 
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "explicit"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "simwai.biome-vscode"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "simwai.biome-vscode"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "simwai.biome-vscode"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "simwai.biome-vscode"
 	}
 }

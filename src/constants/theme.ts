@@ -1,44 +1,74 @@
 /**
- * Transit Connect — design tokens
- * Single source of truth for colors, spacing, radius, typography.
- * Import { colors, spacing, radius, typography } wherever needed.
+ * Transit Connect Design System
+ *
+ * Brand -> Common colors used across all themes
+ * Dark  -> Default app theme
+ * Light -> Optional light theme
  */
 
-export const colors = {
-	// ── Backgrounds ───────────────────────────────────────────────
-	navyDeep: "#0D1B2A", // darkest bg, hero, dark screens
-	navyMid: "#1A2E45", // card / input bg (dark)
-	navyCard: "#111D2B", // screen body bg (dark)
+// ==============================
+// Brand Colors
+// ==============================
 
-	// ── Brand accents ─────────────────────────────────────────────
-	teal: "#00C9A7", // primary CTA, bus color, live-dot
-	tealDeep: "#007A67", // teal pressed / dark variant
-	tealMuted: "rgba(0,201,167,0.12)", // teal ghost bg
-	tealBorder: "rgba(0,201,167,0.25)", // teal ghost border
+export const brand = {
+	teal: "#00C9A7",
+	tealDeep: "#007A67",
+	tealMuted: "rgba(0,201,167,0.12)",
+	tealBorder: "rgba(0,201,167,0.25)",
+	amber: "#F4A72A",
+	amberDeep: "#B87A1A",
+} as const;
 
-	amber: "#F4A72A", // train stripe, warnings, highlights
-	amberDeep: "#B87A1A", // amber pressed
+// Flip this to switch the entire app between dark and light mode for now.
+export const isDarkMode = false;
 
-	// ── Text ──────────────────────────────────────────────────────
-	textPrimary: "#F0F4F8", // headings on dark
-	textSecondary: "#7A8FA6", // body on dark
-	textMuted: "#4A6A8A", // labels, placeholders
+// ==============================
+// Dark Theme
+// ==============================
 
-	// ── Light mode overrides ──────────────────────────────────────
-	light: {
-		bg: "#F0F6FF",
-		card: "#EBF2FA",
-		inputBg: "#FFFFFF",
-		inputBorder: "rgba(0,0,0,0.10)",
-		textPrimary: "#0D1B2A",
-		textMuted: "#7A9AAA",
-	},
-
-	// ── Misc ──────────────────────────────────────────────────────
-	slate: "#2A4A6A", // rail track color
+export const dark = {
+	background: "#0D1B2A",
+	surface: "#111D2B",
+	card: "#1A2E45",
+	textPrimary: "#F0F4F8",
+	textSecondary: "#7A8FA6",
+	textMuted: "#4A6A8A",
+	border: "rgba(255,255,255,0.10)",
+	divider: "rgba(255,255,255,0.10)",
+	inputBackground: "rgba(255,255,255,0.04)",
+	inputBorder: "rgba(255,255,255,0.09)",
 	white: "#FFFFFF",
 	black: "#000000",
 } as const;
+
+// ==============================
+// Light Theme
+// ==============================
+
+export const light = {
+	// Backgrounds
+	background: "#F0F6FF",
+	surface: "#EBF2FA",
+	card: "#FFFFFF",
+
+	// Text
+	textPrimary: "#0D1B2A",
+	textSecondary: "#36526B",
+	textMuted: "#7A9AAA",
+
+	// Borders
+	border: "rgba(0,0,0,0.10)",
+	divider: "rgba(0,0,0,0.08)",
+
+	// Inputs
+	inputBackground: "#FFFFFF",
+	inputBorder: "rgba(0,0,0,0.10)",
+
+	white: "#FFFFFF",
+	black: "#000000",
+} as const;
+
+export const theme = isDarkMode ? dark : light;
 
 export const spacing = {
 	xs: 4,
@@ -57,7 +87,6 @@ export const radius = {
 } as const;
 
 export const typography = {
-	// font sizes
 	xs: 10,
 	sm: 11,
 	base: 14,
@@ -65,12 +94,10 @@ export const typography = {
 	lg: 19,
 	xl: 24,
 
-	// weights
 	regular: "400" as const,
 	medium: "500" as const,
 	bold: "700" as const,
 
-	// letter spacing
 	wide: 0.09,
 	wider: 0.12,
 } as const;
