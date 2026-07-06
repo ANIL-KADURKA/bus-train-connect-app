@@ -18,15 +18,18 @@ import {
 } from "react-native";
 import { sendOtp } from "../api/auth";
 import { TransitHero } from "../components/TrainBusHero";
+import { getFirebaseAuthErrorMessage } from "../constants/error.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
-import { colors, radius, spacing, typography } from "../constants/theme";
+import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
 import app from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useAuthStore } from "../store/authStore";
 import { sanitizePhoneNumber, validatePhoneNumber } from "../utils/phone.utils";
 
-type Props = { navigation: NativeStackNavigationProp<RootStackParamList, "Phone"> };
+type Props = {
+	navigation: NativeStackNavigationProp<RootStackParamList, "Phone">;
+};
 
 const country_code = default_country.code;
 
@@ -46,7 +49,9 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 			storePhone(variables.phone);
 			navigation.navigate("Otp");
 		},
-		onError: (e: Error) => Alert.alert("Error", e.message),
+		onError: (e: Error) => {
+			Alert.alert("Error", getFirebaseAuthErrorMessage(e));
+		},
 	});
 
 	const canSend = validatePhoneNumber(phone, country_code);
@@ -75,10 +80,7 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 			/>
 
 			<ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-				{/* ── Animated hero ───────────────────────────────────── */}
 				<TransitHero height={150} />
-
-				{/* ── Hero text ───────────────────────────────────────── */}
 				<View style={styles.heroText}>
 					<View style={styles.appBadge}>
 						<Text style={styles.appBadgeText}>Transit Connect</Text>
@@ -86,13 +88,8 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 					<Text style={styles.heroTitle}>Enter your number</Text>
 					<Text style={styles.heroSub}>We'll send a one-time code via SMS</Text>
 				</View>
-
-				{/* ── Form ────────────────────────────────────────────── */}
 				<View style={styles.form}>
-					{/* Input label */}
 					<Text style={styles.inputLabel}>Phone number</Text>
-
-					{/* Phone row */}
 					<View style={styles.phoneRow}>
 						<Text style={styles.prefix}>{country_code}</Text>
 						<View style={styles.divider} />
@@ -101,29 +98,25 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 							onChangeText={setPhone}
 							keyboardType="phone-pad"
 							placeholder="98765 43210"
-							placeholderTextColor={colors.textMuted}
+							placeholderTextColor={theme.textMuted}
 							style={styles.phoneInput}
 							maxLength={14}
 							autoFocus
 						/>
 					</View>
-
-					{/* CTA */}
 					<Pressable
 						onPress={handleSendOtp}
 						disabled={!canSend || isPending}
 						style={[styles.otpBtn, (!canSend || isPending) && styles.otpBtnDisabled]}
 					>
 						{isPending ? (
-							<ActivityIndicator color={colors.navyDeep} />
+							<ActivityIndicator color={theme.textPrimary} />
 						) : (
 							<Text style={[styles.otpBtnText, !canSend && styles.otpBtnTextDisabled]}>
 								Send OTP →
 							</Text>
 						)}
 					</Pressable>
-
-					{/* Disclaimer */}
 					<Text style={styles.disclaimer}>
 						By continuing, you agree to receive an SMS.{"\n"}Standard rates may apply.
 					</Text>
@@ -136,15 +129,14 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
 	root: {
 		flex: 1,
-		backgroundColor: colors.navyDeep,
+		backgroundColor: theme.background,
 	},
 	scroll: {
 		flexGrow: 1,
 	},
 
-	// Hero text block
 	heroText: {
-		backgroundColor: colors.navyDeep,
+		backgroundColor: theme.background,
 		alignItems: "center",
 		paddingVertical: spacing.md,
 		paddingHorizontal: spacing.lg,
@@ -152,9 +144,9 @@ const styles = StyleSheet.create({
 	appBadge: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: colors.tealMuted,
+		backgroundColor: brand.tealMuted,
 		borderWidth: 0.5,
-		borderColor: colors.tealBorder,
+		borderColor: brand.tealBorder,
 		borderRadius: radius.full,
 		paddingVertical: 3,
 		paddingHorizontal: spacing.sm + 2,
@@ -162,25 +154,23 @@ const styles = StyleSheet.create({
 	},
 	appBadgeText: {
 		fontSize: typography.xs,
-		color: colors.teal,
+		color: brand.teal,
 		fontWeight: typography.medium,
 	},
 	heroTitle: {
 		fontSize: typography.lg,
 		fontWeight: typography.medium,
-		color: colors.textPrimary,
+		color: theme.textPrimary,
 		letterSpacing: -0.3,
 	},
 	heroSub: {
 		fontSize: typography.sm,
-		color: colors.textSecondary,
+		color: theme.textSecondary,
 		marginTop: 3,
 	},
-
-	// Form
 	form: {
 		flex: 1,
-		backgroundColor: colors.navyCard,
+		backgroundColor: theme.background,
 		paddingHorizontal: spacing.md,
 		paddingTop: spacing.md,
 		paddingBottom: spacing.xl,
@@ -189,7 +179,7 @@ const styles = StyleSheet.create({
 	inputLabel: {
 		fontSize: typography.xs,
 		fontWeight: typography.medium,
-		color: colors.textMuted,
+		color: theme.textMuted,
 		textTransform: "uppercase",
 		letterSpacing: typography.wide,
 		marginBottom: 2,
@@ -197,9 +187,9 @@ const styles = StyleSheet.create({
 	phoneRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: "rgba(255,255,255,0.04)",
+		backgroundColor: theme.inputBackground,
 		borderWidth: 0.5,
-		borderColor: "rgba(255,255,255,0.09)",
+		borderColor: theme.inputBorder,
 		borderRadius: radius.md,
 		paddingHorizontal: spacing.md,
 		height: 48,
@@ -208,46 +198,42 @@ const styles = StyleSheet.create({
 	prefix: {
 		fontSize: typography.base,
 		fontWeight: typography.medium,
-		color: colors.textPrimary,
+		color: theme.textPrimary,
 		opacity: 0.75,
 	},
 	divider: {
 		width: 1,
 		height: 20,
-		backgroundColor: "rgba(255,255,255,0.10)",
+		backgroundColor: theme.divider,
 	},
 	phoneInput: {
 		flex: 1,
 		fontSize: typography.base,
-		color: colors.textPrimary,
+		color: theme.textPrimary,
 		fontWeight: typography.medium,
 	},
-
-	// Button
 	otpBtn: {
 		height: 48,
 		borderRadius: radius.md,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.teal,
+		backgroundColor: isDarkMode ? theme.background : brand.teal,
 		marginTop: spacing.xs,
 	},
 	otpBtnDisabled: {
-		backgroundColor: "rgba(255,255,255,0.06)",
+		backgroundColor: theme.inputBackground,
 	},
 	otpBtnText: {
 		fontSize: typography.base,
 		fontWeight: typography.medium,
-		color: colors.navyDeep,
+		color: isDarkMode ? theme.textPrimary : theme.white,
 	},
 	otpBtnTextDisabled: {
-		color: colors.textMuted,
+		color: theme.textMuted,
 	},
-
-	// Disclaimer
 	disclaimer: {
 		fontSize: 9.5,
-		color: colors.textMuted,
+		color: theme.textMuted,
 		textAlign: "center",
 		lineHeight: 15,
 		opacity: 0.75,
