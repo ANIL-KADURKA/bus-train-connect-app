@@ -4,6 +4,7 @@ import {
 	signInWithPhoneNumber,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { api } from "./axios";
 
 export const sendOtp = async ({
 	phone,
@@ -22,6 +23,22 @@ export const verifyOtp = async ({
 	confirmation: Awaited<ReturnType<typeof sendOtp>>;
 	otp: string;
 }) => {
-	const result = await confirmation.confirm(otp);
-	return result?.user ?? null;
+	await confirmation.confirm(otp);
+	return login();
+};
+
+export const login = async () => {
+	try {
+		const { data } = await api.post("/auth/login");
+		return data;
+	} catch (error) {
+		console.error("Login failed:", error);
+		throw error;
+	}
+};
+
+export const getCurrentUser = async () => {
+	const { data } = await api.get("/auth/me");
+	console.log("Current user:", data);
+	return data;
 };
