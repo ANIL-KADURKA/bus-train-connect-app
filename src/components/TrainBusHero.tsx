@@ -11,8 +11,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 import Svg, { Circle, Ellipse, Line, Path, Rect, Text as SvgText } from "react-native-svg";
-
-import { colors } from "../constants/theme";
+import { isDarkMode, theme } from "../constants/theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,49 +26,126 @@ interface TransitHeroProps {
 const CitySkyline: React.FC = () => (
 	<Svg width={300} height={55} viewBox="0 0 300 55" style={StyleSheet.absoluteFillObject}>
 		{/* Left cluster */}
-		<Rect x={10} y={25} width={18} height={30} fill="#0F2235" opacity={0.8} />
-		<Rect x={13} y={28} width={3} height={3} fill={colors.amber} opacity={0.4} />
-		<Rect x={19} y={28} width={3} height={3} fill={colors.amber} opacity={0.3} />
-		<Rect x={13} y={34} width={3} height={3} fill={colors.teal} opacity={0.3} />
+		<Rect
+			x={10}
+			y={25}
+			width={18}
+			height={30}
+			fill={isDarkMode ? "#0F2235" : "#D3DEEA"}
+			opacity={0.8}
+		/>
+		<Rect x={13} y={28} width={3} height={3} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={19} y={28} width={3} height={3} fill={theme.textPrimary} opacity={0.3} />
+		<Rect x={13} y={34} width={3} height={3} fill={theme.textPrimary} opacity={0.3} />
 
-		<Rect x={32} y={10} width={14} height={45} fill="#0F2235" opacity={0.85} />
-		<Rect x={35} y={14} width={3} height={3} fill={colors.teal} opacity={0.4} />
-		<Rect x={40} y={14} width={3} height={3} fill={colors.teal} opacity={0.3} />
-		<Rect x={35} y={20} width={3} height={3} fill="#5A9AB5" opacity={0.3} />
-		<Rect x={40} y={20} width={3} height={3} fill={colors.amber} opacity={0.35} />
-		<Rect x={36} y={0} width={4} height={10} fill="#0F2235" opacity={0.7} />
+		<Rect
+			x={32}
+			y={10}
+			width={14}
+			height={45}
+			fill={isDarkMode ? "#0F2235" : "#C8D8E6"}
+			opacity={0.85}
+		/>
+		<Rect x={35} y={14} width={3} height={3} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={40} y={14} width={3} height={3} fill={theme.textPrimary} opacity={0.3} />
+		<Rect x={35} y={20} width={3} height={3} fill={theme.textPrimary} opacity={0.3} />
+		<Rect x={40} y={20} width={3} height={3} fill={theme.textPrimary} opacity={0.35} />
+		<Rect
+			x={36}
+			y={0}
+			width={4}
+			height={10}
+			fill={isDarkMode ? "#0F2235" : "#C8D8E6"}
+			opacity={0.7}
+		/>
 
-		<Rect x={50} y={18} width={22} height={37} fill="#112030" opacity={0.8} />
-		<Rect x={53} y={22} width={4} height={5} fill="#5A9AB5" opacity={0.4} />
-		<Rect x={60} y={22} width={4} height={5} fill="#5A9AB5" opacity={0.35} />
-		<Rect x={53} y={30} width={4} height={5} fill={colors.amber} opacity={0.3} />
-		<Rect x={60} y={30} width={4} height={5} fill={colors.teal} opacity={0.3} />
+		<Rect
+			x={50}
+			y={18}
+			width={22}
+			height={37}
+			fill={isDarkMode ? "#112030" : "#D7E2EC"}
+			opacity={0.8}
+		/>
+		<Rect x={53} y={22} width={4} height={5} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={60} y={22} width={4} height={5} fill={theme.textPrimary} opacity={0.35} />
+		<Rect x={53} y={30} width={4} height={5} fill={theme.textPrimary} opacity={0.3} />
+		<Rect x={60} y={30} width={4} height={5} fill={theme.textPrimary} opacity={0.3} />
 
-		<Rect x={76} y={30} width={12} height={25} fill="#0F2235" opacity={0.75} />
-		<Rect x={79} y={33} width={3} height={3} fill={colors.amber} opacity={0.4} />
+		<Rect
+			x={76}
+			y={30}
+			width={12}
+			height={25}
+			fill={isDarkMode ? "#0F2235" : "#D3DEEA"}
+			opacity={0.75}
+		/>
+		<Rect x={79} y={33} width={3} height={3} fill={theme.textPrimary} opacity={0.4} />
 
 		{/* Right cluster */}
-		<Rect x={200} y={20} width={16} height={35} fill="#0F2235" opacity={0.8} />
-		<Rect x={203} y={24} width={4} height={5} fill={colors.teal} opacity={0.4} />
-		<Rect x={209} y={24} width={4} height={5} fill={colors.teal} opacity={0.3} />
+		<Rect
+			x={200}
+			y={20}
+			width={16}
+			height={35}
+			fill={isDarkMode ? "#0F2235" : "#D3DEEA"}
+			opacity={0.8}
+		/>
+		<Rect x={203} y={24} width={4} height={5} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={209} y={24} width={4} height={5} fill={theme.textPrimary} opacity={0.3} />
 
-		<Rect x={220} y={8} width={18} height={47} fill="#112030" opacity={0.85} />
-		<Rect x={223} y={12} width={4} height={5} fill={colors.amber} opacity={0.45} />
-		<Rect x={230} y={12} width={4} height={5} fill={colors.amber} opacity={0.3} />
-		<Rect x={223} y={20} width={4} height={5} fill="#5A9AB5" opacity={0.35} />
-		<Rect x={230} y={20} width={4} height={5} fill={colors.teal} opacity={0.3} />
-		<Rect x={225} y={0} width={5} height={8} fill="#112030" opacity={0.7} />
+		<Rect
+			x={220}
+			y={8}
+			width={18}
+			height={47}
+			fill={isDarkMode ? "#112030" : "#D7E2EC"}
+			opacity={0.85}
+		/>
+		<Rect x={223} y={12} width={4} height={5} fill={theme.textPrimary} opacity={0.45} />
+		<Rect x={230} y={12} width={4} height={5} fill={theme.textPrimary} opacity={0.3} />
+		<Rect x={223} y={20} width={4} height={5} fill={theme.textPrimary} opacity={0.35} />
+		<Rect x={230} y={20} width={4} height={5} fill={theme.textPrimary} opacity={0.3} />
+		<Rect
+			x={225}
+			y={0}
+			width={5}
+			height={8}
+			fill={isDarkMode ? "#112030" : "#D7E2EC"}
+			opacity={0.7}
+		/>
 
-		<Rect x={242} y={22} width={20} height={33} fill="#0F2235" opacity={0.8} />
-		<Rect x={245} y={26} width={4} height={4} fill={colors.teal} opacity={0.4} />
-		<Rect x={252} y={26} width={4} height={4} fill={colors.teal} opacity={0.35} />
+		<Rect
+			x={242}
+			y={22}
+			width={20}
+			height={33}
+			fill={isDarkMode ? "#0F2235" : "#D3DEEA"}
+			opacity={0.8}
+		/>
+		<Rect x={245} y={26} width={4} height={4} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={252} y={26} width={4} height={4} fill={theme.textPrimary} opacity={0.35} />
 
-		<Rect x={265} y={15} width={14} height={40} fill="#112030" opacity={0.8} />
-		<Rect x={268} y={19} width={3} height={4} fill={colors.amber} opacity={0.4} />
-		<Rect x={273} y={19} width={3} height={4} fill={colors.amber} opacity={0.3} />
+		<Rect
+			x={265}
+			y={15}
+			width={14}
+			height={40}
+			fill={isDarkMode ? "#112030" : "#D7E2EC"}
+			opacity={0.8}
+		/>
+		<Rect x={268} y={19} width={3} height={4} fill={theme.textPrimary} opacity={0.4} />
+		<Rect x={273} y={19} width={3} height={4} fill={theme.textPrimary} opacity={0.3} />
 
-		<Rect x={282} y={28} width={18} height={27} fill="#0F2235" opacity={0.75} />
-		<Rect x={285} y={31} width={3} height={3} fill="#5A9AB5" opacity={0.4} />
+		<Rect
+			x={282}
+			y={28}
+			width={18}
+			height={27}
+			fill={isDarkMode ? "#0F2235" : "#D3DEEA"}
+			opacity={0.75}
+		/>
+		<Rect x={285} y={31} width={3} height={3} fill={theme.textPrimary} opacity={0.4} />
 	</Svg>
 );
 
@@ -97,7 +173,7 @@ const BusSvg: React.FC = () => (
 		<Rect x={98} y={10} width={7} height={5} rx={2} fill="#FFF5CC" />
 		<Ellipse cx={101} cy={12} rx={3} ry={1.5} fill="#FFE066" opacity={0.7} />
 		{/* Turn signal */}
-		<Rect x={98} y={17} width={7} height={3} rx={1} fill={colors.amber} />
+		<Rect x={98} y={17} width={7} height={3} rx={1} fill={theme.textPrimary} />
 		{/* Bumper */}
 		<Rect x={99} y={35} width={8} height={4} rx={2} fill="#0F4A3C" />
 		{/* Rear light */}
@@ -125,8 +201,8 @@ const BusSvg: React.FC = () => (
 		<Rect x={43} y={32} width={2} height={4} rx={1} fill="#0F4A3C" />
 		{/* Destination board */}
 		<Rect x={17} y={23} width={16} height={7} rx={1.5} fill="#0A1A14" />
-		<Rect x={18} y={24} width={7} height={2} rx={0.5} fill={colors.teal} opacity={0.9} />
-		<Rect x={18} y={27} width={5} height={1.5} rx={0.5} fill={colors.teal} opacity={0.5} />
+		<Rect x={18} y={24} width={7} height={2} rx={0.5} fill={theme.textPrimary} opacity={0.9} />
+		<Rect x={18} y={27} width={5} height={1.5} rx={0.5} fill={theme.textPrimary} opacity={0.5} />
 		{/* Undercarriage */}
 		<Rect x={8} y={38} width={90} height={3} rx={1} fill="#0F4A3C" />
 		{/* Wheels */}
@@ -175,7 +251,7 @@ const TrainSvg: React.FC = () => (
 		<Rect x={4} y={6} width={122} height={8} rx={5} fill="#1E3858" />
 		<Rect x={4} y={11} width={122} height={3} fill="#1E3858" />
 		{/* Amber stripe */}
-		<Rect x={4} y={14} width={122} height={4} fill={colors.amber} />
+		<Rect x={4} y={14} width={122} height={4} fill={theme.textPrimary} />
 		{/* Blue mid band */}
 		<Rect x={4} y={18} width={122} height={3} fill="#3A6A96" />
 		{/* Front cab */}
@@ -184,7 +260,7 @@ const TrainSvg: React.FC = () => (
 		<Path d="M115 8 Q122 8 126 14" stroke="#3A9ACC" strokeWidth={0.7} fill="none" opacity={0.5} />
 		<Rect x={118} y={9} width={8} height={4} rx={2} fill="#FFF5CC" />
 		<Ellipse cx={122} cy={11} rx={3} ry={1.5} fill="#FFE066" opacity={0.7} />
-		<Rect x={118} y={15} width={8} height={2.5} rx={1} fill={colors.amber} />
+		<Rect x={118} y={15} width={8} height={2.5} rx={1} fill={theme.textPrimary} />
 		<Rect x={124} y={22} width={6} height={4} rx={1} fill="#1A2E3A" />
 		{/* Rear */}
 		<Rect x={0} y={8} width={8} height={18} rx={3} fill="#5AB8E0" opacity={0.7} />
@@ -231,8 +307,8 @@ const TrainSvg: React.FC = () => (
 		<Rect x={83} y={37} width={34} height={2} rx={1} fill="#2A3A4A" />
 		{/* Route board */}
 		<Rect x={10} y={20} width={18} height={6} rx={1.5} fill="#0A1520" />
-		<Rect x={11} y={21} width={8} height={1.5} rx={0.5} fill={colors.teal} opacity={0.9} />
-		<Rect x={11} y={23.5} width={6} height={1.5} rx={0.5} fill={colors.amber} opacity={0.7} />
+		<Rect x={11} y={21} width={8} height={1.5} rx={0.5} fill={theme.textPrimary} opacity={0.9} />
+		<Rect x={11} y={23.5} width={6} height={1.5} rx={0.5} fill={theme.textPrimary} opacity={0.7} />
 	</Svg>
 );
 
@@ -306,8 +382,8 @@ export const TransitHero: React.FC<TransitHeroProps> = ({ height = 150, style })
 						cx={cx}
 						cy={cy}
 						r={r}
-						fill="#fff"
-						opacity={op}
+						fill={isDarkMode ? "#fff" : theme.textSecondary}
+						opacity={isDarkMode ? op : 0.12}
 					/>
 				))}
 			</Svg>
@@ -354,7 +430,7 @@ export const TransitHero: React.FC<TransitHeroProps> = ({ height = 150, style })
 const styles = StyleSheet.create({
 	container: {
 		width: "100%",
-		backgroundColor: colors.navyDeep,
+		backgroundColor: theme.background,
 		overflow: "hidden",
 		position: "relative",
 	},
@@ -364,9 +440,9 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		height: 70,
-		// RN doesn't support radial-gradient; a subtle dark-to-slightly-lighter is enough
-		backgroundColor: "#132233",
-		opacity: 0.9,
+		// RN doesn't support radial-gradient; keep a soft mode-aware wash instead.
+		backgroundColor: isDarkMode ? "#132233" : "#F3F8FF",
+		opacity: 0.95,
 	},
 	stars: {
 		position: "absolute",
@@ -385,7 +461,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		height: 38,
-		backgroundColor: "#141E2B",
+		backgroundColor: isDarkMode ? "#141E2B" : "#DCE7F3",
 	},
 	roadLine: {
 		position: "absolute",
@@ -397,7 +473,7 @@ const styles = StyleSheet.create({
 		backgroundColor: "transparent",
 		borderStyle: "dashed",
 		borderTopWidth: 2,
-		borderTopColor: colors.amber,
+		borderTopColor: theme.textPrimary,
 		opacity: 0.5,
 	},
 	sleepersRow: {
@@ -412,7 +488,7 @@ const styles = StyleSheet.create({
 	sleeper: {
 		width: 7,
 		height: 14,
-		backgroundColor: "#1E3348",
+		backgroundColor: isDarkMode ? "#1E3348" : "#BFCFDE",
 		borderRadius: 1,
 		opacity: 0.5,
 	},
@@ -421,7 +497,7 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		height: 2,
-		backgroundColor: colors.slate,
+		backgroundColor: theme.textPrimary,
 		opacity: 0.6,
 	},
 	vehicle: {
