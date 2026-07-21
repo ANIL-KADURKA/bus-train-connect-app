@@ -16,6 +16,7 @@ import {
 	TextInput,
 	View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { sendOtp } from "../api/auth";
 import { TransitHero } from "../components/TrainBusHero";
 import { getFirebaseAuthErrorMessage } from "../constants/error.constants";
@@ -69,60 +70,62 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 	};
 
 	return (
-		<KeyboardAvoidingView
-			behavior={Platform.OS === platform.IOS ? "padding" : "height"}
-			style={styles.root}
-		>
-			<FirebaseRecaptchaVerifierModal
-				ref={recaptchaRef}
-				firebaseConfig={app.options}
-				attemptInvisibleVerification
-			/>
+		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+			<KeyboardAvoidingView
+				behavior={Platform.OS === platform.IOS ? "padding" : "height"}
+				style={styles.root}
+			>
+				<FirebaseRecaptchaVerifierModal
+					ref={recaptchaRef}
+					firebaseConfig={app.options}
+					attemptInvisibleVerification
+				/>
 
-			<ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-				<TransitHero height={150} />
-				<View style={styles.heroText}>
-					<View style={styles.appBadge}>
-						<Text style={styles.appBadgeText}>Transit Connect</Text>
+				<ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+					<TransitHero height={150} />
+					<View style={styles.heroText}>
+						<View style={styles.appBadge}>
+							<Text style={styles.appBadgeText}>Transit Connect</Text>
+						</View>
+						<Text style={styles.heroTitle}>Enter your number</Text>
+						<Text style={styles.heroSub}>We'll send a one-time code via SMS</Text>
 					</View>
-					<Text style={styles.heroTitle}>Enter your number</Text>
-					<Text style={styles.heroSub}>We'll send a one-time code via SMS</Text>
-				</View>
-				<View style={styles.form}>
-					<Text style={styles.inputLabel}>Phone number</Text>
-					<View style={styles.phoneRow}>
-						<Text style={styles.prefix}>{country_code}</Text>
-						<View style={styles.divider} />
-						<TextInput
-							value={phone}
-							onChangeText={setPhone}
-							keyboardType="phone-pad"
-							placeholder="98765 43210"
-							placeholderTextColor={theme.textMuted}
-							style={styles.phoneInput}
-							maxLength={14}
-							autoFocus
-						/>
+					<View style={styles.form}>
+						<Text style={styles.inputLabel}>Phone number</Text>
+						<View style={styles.phoneRow}>
+							<Text style={styles.prefix}>{country_code}</Text>
+							<View style={styles.divider} />
+							<TextInput
+								value={phone}
+								onChangeText={setPhone}
+								keyboardType="phone-pad"
+								placeholder="98765 43210"
+								placeholderTextColor={theme.textMuted}
+								style={styles.phoneInput}
+								maxLength={14}
+								autoFocus
+							/>
+						</View>
+						<Pressable
+							onPress={handleSendOtp}
+							disabled={!canSend || isPending}
+							style={[styles.otpBtn, (!canSend || isPending) && styles.otpBtnDisabled]}
+						>
+							{isPending ? (
+								<ActivityIndicator color={theme.textPrimary} />
+							) : (
+								<Text style={[styles.otpBtnText, !canSend && styles.otpBtnTextDisabled]}>
+									Send OTP →
+								</Text>
+							)}
+						</Pressable>
+						<Text style={styles.disclaimer}>
+							By continuing, you agree to receive an SMS.{"\n"}Standard rates may apply.
+						</Text>
 					</View>
-					<Pressable
-						onPress={handleSendOtp}
-						disabled={!canSend || isPending}
-						style={[styles.otpBtn, (!canSend || isPending) && styles.otpBtnDisabled]}
-					>
-						{isPending ? (
-							<ActivityIndicator color={theme.textPrimary} />
-						) : (
-							<Text style={[styles.otpBtnText, !canSend && styles.otpBtnTextDisabled]}>
-								Send OTP →
-							</Text>
-						)}
-					</Pressable>
-					<Text style={styles.disclaimer}>
-						By continuing, you agree to receive an SMS.{"\n"}Standard rates may apply.
-					</Text>
-				</View>
-			</ScrollView>
-		</KeyboardAvoidingView>
+				</ScrollView>
+			</KeyboardAvoidingView>
+		</SafeAreaView>
 	);
 };
 

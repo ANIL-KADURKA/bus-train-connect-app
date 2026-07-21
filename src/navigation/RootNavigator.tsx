@@ -1,44 +1,68 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import type { User } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
-import React, { useEffect } from "react";
-
-import { auth } from "../lib/firebase";
+import React from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { brand, theme } from "../constants/theme";
+import { useCurrentUser, useFirebaseAuth } from "../hooks/useUser";
 import { HomeScreen } from "../screens/HomeScreen";
 import { OtpScreen } from "../screens/OtpScreen";
 import { PhoneScreen } from "../screens/PhoneScreen";
-import { useAuthStore } from "../store/authStore";
+import { ProfileCreation } from "../screens/Profile/ProfileCreation";
 
 export type RootStackParamList = {
-	Phone: undefined;
-	Otp: undefined;
-	Home: undefined;
+  Phone: undefined;
+  Otp: undefined;
+  Home: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator = () => {
-	const { user, setUser } = useAuthStore();
+  const { uid, ready } = useFirebaseAuth();
+  const { data: user, isLoading, isError } = useCurrentUser();
 
-	// Keep Zustand in sync with Firebase auth state
-	useEffect(() => {
-		const unsub = onAuthStateChanged(auth, (u: User | null) => setUser(u));
-		return unsub;
-	}, [setUser]);
+  // Hold the splash until we know both whether Firebase has a session and, if it does,
+  // how far through onboarding that user is. Rendering earlier flashes the wrong screen.
+  if (!ready || isLoading) {
+    return (
+      <View style={styles.splash}>
+        <ActivityIndicator size="large" color={brand.teal} />
+      </View>
+    );
+  }
 
-	return (
-		<NavigationContainer>
-			<Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
-				{user ? (
-					<Stack.Screen name="Home" component={HomeScreen} />
-				) : (
-					<>
-						<Stack.Screen name="Phone" component={PhoneScreen} />
-						<Stack.Screen name="Otp" component={OtpScreen} />
-					</>
-				)}
-			</Stack.Navigator>
-		</NavigationContainer>
-	);
+  // isError covers a restored Firebase session whose backend user is gone or whose token
+  // no longer verifies — both need the phone flow again, not a half-loaded Home.
+  const signedIn = uid !== null && !isError && user !== undefined;
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false, animation: "slide_from_right" }}
+      >
+        {signedIn ? (
+          user.onBoardingStatus === "profile_created" ? (
+            <Stack.Screen name="Home" component={HomeScreen} />
+          ) : (
+            <Stack.Screen name="Profile" component={ProfileCreation} />
+          )
+        ) : (
+          <>
+            <Stack.Screen name="Phone" component={PhoneScreen} />
+            <Stack.Screen name="Otp" component={OtpScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 };
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.background,
+  },
+});

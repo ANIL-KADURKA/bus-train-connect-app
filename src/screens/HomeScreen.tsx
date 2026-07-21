@@ -1,17 +1,17 @@
-import { signOut } from "firebase/auth";
 import React from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
-import { auth } from "../lib/firebase";
+import { useSignOut } from "../hooks/useUser";
 import { useAuthStore } from "../store/authStore";
 
 export const HomeScreen: React.FC = () => {
-	const { user, phone, reset } = useAuthStore();
+	const { user, phone } = useAuthStore();
+	const signOutUser = useSignOut();
 
 	const handleSignOut = async () => {
 		try {
-			await signOut(auth);
-			reset();
+			await signOutUser();
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : "Something went wrong.";
 			Alert.alert("Error", message);
@@ -19,7 +19,7 @@ export const HomeScreen: React.FC = () => {
 	};
 
 	return (
-		<View style={styles.root}>
+		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
 			<View style={styles.hero}>
 				<View style={styles.avatar}>
 					<Text style={styles.avatarIcon}>👤</Text>
@@ -27,14 +27,14 @@ export const HomeScreen: React.FC = () => {
 				<Text style={styles.heroTitle}>You're in!</Text>
 				<View style={styles.statusPill}>
 					<Text style={styles.statusDot}>●</Text>
-					<Text style={styles.statusText}>{phone || user?.phoneNumber}</Text>
+					<Text style={styles.statusText}>{phone || user?.mobileNumber}</Text>
 				</View>
 			</View>
 
 			<View style={styles.cards}>
 				<View style={styles.card}>
 					<Text style={styles.label}>Phone</Text>
-					<Text style={styles.value}>{user?.phoneNumber ?? phone ?? "—"}</Text>
+					<Text style={styles.value}>{user?.mobileNumber ?? phone ?? "—"}</Text>
 				</View>
 
 				<View style={styles.providerCard}>
@@ -53,7 +53,7 @@ export const HomeScreen: React.FC = () => {
 					<Text style={styles.signOutText}>Sign Out</Text>
 				</Pressable>
 			</View>
-		</View>
+		</SafeAreaView>
 	);
 };
 
