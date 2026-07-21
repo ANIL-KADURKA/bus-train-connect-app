@@ -6,6 +6,7 @@
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react-native": "^1.0.15",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-firebase/auth": "^25.1.0",
     "@react-navigation/bottom-tabs": "^7.18.13",
     "@react-navigation/native": "^7.3.4",

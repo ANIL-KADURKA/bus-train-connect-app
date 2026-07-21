@@ -16,12 +16,14 @@ export type UpdateProfileInput = {
 	gender?: Gender;
 	bio?: string;
 	profileImage?: ProfileImageInput | null;
+	/** Clears the stored photo. Ignored if profileImage is also set. */
+	removeProfilePhoto?: boolean;
 };
 
 const appendIfPresent = (formData: FormData, key: string, value: unknown): void => {
-	// Omit rather than sending "" — an empty string is a real value to the backend and
-	// would overwrite an existing bio/alias with a blank one.
-	if (value === undefined || value === null || value === "") {
+	// Only undefined/null mean "leave this field alone". An empty string is deliberate —
+	// it's how the edit form clears a bio or alias.
+	if (value === undefined || value === null) {
 		return;
 	}
 
@@ -41,6 +43,8 @@ const toFormData = (input: UpdateProfileInput): FormData => {
 	if (input.profileImage) {
 		// React Native's FormData takes this shape for file parts; the DOM type disagrees.
 		formData.append("profilePhoto", input.profileImage as unknown as Blob);
+	} else if (input.removeProfilePhoto) {
+		appendIfPresent(formData, "removeProfilePhoto", true);
 	}
 
 	return formData;
