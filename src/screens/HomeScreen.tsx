@@ -1,19 +1,30 @@
 import { Bus01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Fab } from "../components/Fab";
 import { ModeSwitcher } from "../components/ModeSwitcher";
+import { type QuickAction, QuickActionsMenu } from "../components/QuickActionsMenu";
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
 import { useModeStore } from "../store/modeStore";
 
 export const HomeScreen: React.FC = () => {
 	const mode = useModeStore((state) => state.mode);
 	const modeLabel = mode === "train" ? "train" : "bus";
+	const [actionsOpen, setActionsOpen] = useState(false);
 
 	// Scoped to `mode`. Populated once the journeys API exists.
 	const activeJourneys: unknown[] = [];
 	const upcomingJourneys: unknown[] = [];
+
+	const handleAction = (action: QuickAction) => {
+		setActionsOpen(false);
+
+		// None of these destinations exist yet — the screens land with the journeys,
+		// parcels and ticket-resale features.
+		Alert.alert("Coming soon", `"${action}" is not built yet.`);
+	};
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top"]}>
@@ -51,6 +62,19 @@ export const HomeScreen: React.FC = () => {
 					</Text>
 				) : null}
 			</ScrollView>
+
+			{/* Menu renders before the FAB so the FAB stays tappable to dismiss. */}
+			<QuickActionsMenu
+				visible={actionsOpen}
+				onClose={() => setActionsOpen(false)}
+				onSelect={handleAction}
+			/>
+
+			<Fab
+				onPress={() => setActionsOpen((open) => !open)}
+				active={actionsOpen}
+				accessibilityLabel="Create journey, parcel request and more"
+			/>
 		</SafeAreaView>
 	);
 };
@@ -81,7 +105,9 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingHorizontal: spacing.xl,
-		paddingBottom: spacing.xxl,
+		// Clears the FAB (56px tall, spacing.xl from the bottom) so the last card in a
+		// scrolled list is never hidden behind it.
+		paddingBottom: 56 + spacing.xl * 2,
 		gap: spacing.md,
 	},
 	sectionTitle: {
