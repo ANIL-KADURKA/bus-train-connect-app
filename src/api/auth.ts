@@ -3,6 +3,7 @@ import {
 	type ConfirmationResult,
 	signInWithPhoneNumber,
 } from "firebase/auth";
+import type { AuthUserDto } from "../dto/user.dto";
 import { auth } from "../lib/firebase";
 import { api } from "./axios";
 
@@ -20,25 +21,23 @@ export const verifyOtp = async ({
 	confirmation,
 	otp,
 }: {
-	confirmation: Awaited<ReturnType<typeof sendOtp>>;
+	confirmation: ConfirmationResult;
 	otp: string;
-}) => {
+}): Promise<AuthUserDto> => {
 	await confirmation.confirm(otp);
+
 	return login();
 };
 
-export const login = async () => {
-	try {
-		const { data } = await api.post("/auth/login");
-		return data;
-	} catch (error) {
-		console.error("Login failed:", error);
-		throw error;
-	}
+/** Creates the backend user on first call, returns the existing one afterwards. */
+export const login = async (): Promise<AuthUserDto> => {
+	const { data } = await api.post<AuthUserDto>("/auth/login");
+
+	return data;
 };
 
-export const getCurrentUser = async () => {
-	const { data } = await api.get("/auth/me");
-	console.log("Current user:", data);
+export const getCurrentUser = async (): Promise<AuthUserDto> => {
+	const { data } = await api.get<AuthUserDto>("/auth/me");
+
 	return data;
 };
