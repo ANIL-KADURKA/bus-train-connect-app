@@ -1,12 +1,18 @@
 import { Bus01Icon, Message01Icon, SentIcon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Badge } from "../../components/shared/Badge";
 import { ConversationRow } from "../../components/shared/ConversationRow";
 import { SegmentedControl, type SegmentOption } from "../../components/shared/SegmentedControl";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
+import { useAllJourneys } from "../../hooks/useJourneys";
+import type { MainTabParamList } from "../../navigation/MainTabNavigator";
+import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { useBadgeStore } from "../../store/badgeStore";
 
 type ChatsTab = "journeys" | "dms";
@@ -15,15 +21,6 @@ const TABS: SegmentOption<ChatsTab>[] = [
 	{ value: "journeys", label: "Journeys" },
 	{ value: "dms", label: "DMs" },
 ];
-
-export interface JourneyChat {
-	id: string;
-	transportType: "bus" | "train";
-	routeName: string;
-	lastMessage?: string;
-	unreadCount: number;
-	timestamp?: string;
-}
 
 export interface DirectChat {
 	id: string;
@@ -34,6 +31,14 @@ export interface DirectChat {
 	timestamp?: string;
 }
 
+type ChatsNavigation = CompositeNavigationProp<
+	BottomTabNavigationProp<MainTabParamList, "Chats">,
+	NativeStackNavigationProp<RootStackParamList>
+>;
+
+const journeyChatTitle = (journey: { serviceNumber: string; serviceName?: string }): string =>
+	journey.serviceName ? `${journey.serviceNumber} · ${journey.serviceName}` : journey.serviceNumber;
+
 const EmptyState: React.FC<{ title: string; body: string }> = ({ title, body }) => (
 	<View style={styles.empty}>
 		<HugeiconsIcon icon={Message01Icon} size={40} strokeWidth={1.4} color={theme.textMuted} />
@@ -43,11 +48,13 @@ const EmptyState: React.FC<{ title: string; body: string }> = ({ title, body }) 
 );
 
 export const ChatsScreen: React.FC = () => {
+	const navigation = useNavigation<ChatsNavigation>();
 	const [tab, setTab] = useState<ChatsTab>("journeys");
 	const pendingChatRequests = useBadgeStore((state) => state.pendingChatRequests);
+	const { data: journeys, isLoading: journeysLoading } = useAllJourneys();
 
-	// Populated once the backend exposes journey group chats and private chats.
-	const journeyChats: JourneyChat[] = [];
+	const journeyChats = (journeys ?? []).filter((journey) => journey.isMember);
+	// Populated once the backend exposes private chats.
 	const directChats: DirectChat[] = [];
 
 	return (
@@ -61,21 +68,28 @@ export const ChatsScreen: React.FC = () => {
 			{tab === "journeys" ? (
 				<FlatList
 					data={journeyChats}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item) => item.journeyId}
 					renderItem={({ item }) => (
 						<ConversationRow
-							title={item.routeName}
-							subtitle={item.lastMessage}
-							timestamp={item.timestamp}
-							unreadCount={item.unreadCount}
+							title={journeyChatTitle(item)}
+							subtitle={`${item.sourceLocation} to ${item.destinationLocation}`}
+							timestamp={item.journeyDate}
+							unreadCount={0}
 							icon={item.transportType === "train" ? Train01Icon : Bus01Icon}
+							onPress={() => navigation.navigate("JourneyGroupChat", { journey: item })}
 						/>
 					)}
 					ListEmptyComponent={
-						<EmptyState
-							title="No journey chats yet"
-							body="Join a journey and its group chat will appear here."
-						/>
+						journeysLoading ? (
+							<View style={styles.loading}>
+								<ActivityIndicator size="large" color={brand.teal} />
+							</View>
+						) : (
+							<EmptyState
+								title="No journey chats yet"
+								body="Join a journey and its group chat will appear here."
+							/>
+						)
 					}
 					contentContainerStyle={journeyChats.length === 0 && styles.emptyContainer}
 				/>
@@ -165,6 +179,11 @@ const styles = StyleSheet.create({
 	},
 	emptyContainer: {
 		flexGrow: 1,
+	},
+	loading: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	empty: {
 		flex: 1,

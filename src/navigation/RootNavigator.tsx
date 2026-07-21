@@ -1,9 +1,11 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { brand, theme } from "../constants/theme";
 import { useCurrentUser, useFirebaseAuth } from "../hooks/useUser";
+import type { JourneyListItem } from "../api/journeys";
+import { JourneyGroupChatScreen } from "../screens/Chats/JourneyGroupChatScreen";
 import { OtpScreen } from "../screens/OtpScreen";
 import { PhoneScreen } from "../screens/PhoneScreen";
 import { ProfileCreation } from "../screens/Profile/ProfileCreation";
@@ -14,10 +16,24 @@ export type RootStackParamList = {
 	Otp: undefined;
 	/** The four-tab app shell, shown once onboarding is complete. */
 	Main: undefined;
+	JourneyGroupChat: {
+		journey: JourneyListItem;
+	};
 	Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const navigationTheme = {
+	...DefaultTheme,
+	colors: {
+		...DefaultTheme.colors,
+		background: theme.background,
+		card: theme.card,
+		text: theme.textPrimary,
+		border: theme.border,
+	},
+};
 
 export const RootNavigator = () => {
 	const { uid, ready } = useFirebaseAuth();
@@ -38,11 +54,20 @@ export const RootNavigator = () => {
 	const signedIn = uid !== null && !isError && user !== undefined;
 
 	return (
-		<NavigationContainer>
-			<Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
+		<NavigationContainer theme={navigationTheme}>
+			<Stack.Navigator
+				screenOptions={{
+					headerShown: false,
+					animation: "slide_from_right",
+					contentStyle: { backgroundColor: theme.background },
+				}}
+			>
 				{signedIn ? (
 					user.onBoardingStatus === "profile_created" ? (
-						<Stack.Screen name="Main" component={MainTabNavigator} />
+						<>
+							<Stack.Screen name="Main" component={MainTabNavigator} />
+							<Stack.Screen name="JourneyGroupChat" component={JourneyGroupChatScreen} />
+						</>
 					) : (
 						<Stack.Screen name="Profile" component={ProfileCreation} />
 					)
