@@ -1,58 +1,56 @@
+import { Bus01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
 import React from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
-import { useSignOut } from "../hooks/useUser";
-import { useAuthStore } from "../store/authStore";
+import { ModeSwitcher } from "../components/ModeSwitcher";
+import { brand, radius, spacing, theme, typography } from "../constants/theme";
+import { useModeStore } from "../store/modeStore";
 
 export const HomeScreen: React.FC = () => {
-	const { user, phone } = useAuthStore();
-	const signOutUser = useSignOut();
+	const mode = useModeStore((state) => state.mode);
+	const modeLabel = mode === "train" ? "train" : "bus";
 
-	const handleSignOut = async () => {
-		try {
-			await signOutUser();
-		} catch (error: unknown) {
-			const message = error instanceof Error ? error.message : "Something went wrong.";
-			Alert.alert("Error", message);
-		}
-	};
+	// Scoped to `mode`. Populated once the journeys API exists.
+	const activeJourneys: unknown[] = [];
+	const upcomingJourneys: unknown[] = [];
 
 	return (
-		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-			<View style={styles.hero}>
-				<View style={styles.avatar}>
-					<Text style={styles.avatarIcon}>👤</Text>
-				</View>
-				<Text style={styles.heroTitle}>You're in!</Text>
-				<View style={styles.statusPill}>
-					<Text style={styles.statusDot}>●</Text>
-					<Text style={styles.statusText}>{phone || user?.mobileNumber}</Text>
-				</View>
-			</View>
+		<SafeAreaView style={styles.root} edges={["top"]}>
+			{/* Fixed above the search bar — always visible, never behind a menu. */}
+			<ModeSwitcher />
 
-			<View style={styles.cards}>
-				<View style={styles.card}>
-					<Text style={styles.label}>Phone</Text>
-					<Text style={styles.value}>{user?.mobileNumber ?? phone ?? "—"}</Text>
-				</View>
-
-				<View style={styles.providerCard}>
-					<View style={styles.providerBadge}>
-						<Text style={styles.providerBadgeText}>✓</Text>
-					</View>
-					<View>
-						<Text style={styles.providerLabel}>Auth provider</Text>
-						<Text style={styles.providerValue}>Firebase Phone Auth</Text>
-					</View>
-				</View>
-			</View>
-
-			<View style={styles.signOutWrap}>
-				<Pressable onPress={handleSignOut} style={styles.signOutButton}>
-					<Text style={styles.signOutText}>Sign Out</Text>
+			<View style={styles.searchWrap}>
+				<Pressable style={styles.search} accessibilityRole="search">
+					<HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.8} color={theme.textMuted} />
+					<Text style={styles.searchPlaceholder}>Search {modeLabel} number, route or PNR</Text>
 				</Pressable>
 			</View>
+
+			<ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+				<Text style={styles.sectionTitle}>Active journey</Text>
+				{activeJourneys.length === 0 ? (
+					<View style={styles.placeholderCard}>
+						<HugeiconsIcon
+							icon={mode === "train" ? Train01Icon : Bus01Icon}
+							size={28}
+							strokeWidth={1.5}
+							color={brand.tealDeep}
+						/>
+						<Text style={styles.placeholderTitle}>No active {modeLabel} journey</Text>
+						<Text style={styles.placeholderBody}>
+							Upload a ticket or add a journey to join its group.
+						</Text>
+					</View>
+				) : null}
+
+				<Text style={styles.sectionTitle}>Upcoming</Text>
+				{upcomingJourneys.length === 0 ? (
+					<Text style={styles.emptyLine}>
+						Nothing upcoming. Your next {modeLabel} trip will show here.
+					</Text>
+				) : null}
+			</ScrollView>
 		</SafeAreaView>
 	);
 };
@@ -62,133 +60,57 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: theme.background,
 	},
-	hero: {
-		backgroundColor:  theme.background,
-		borderBottomLeftRadius: 40,
-		borderBottomRightRadius: 40,
-		paddingTop: 64,
-		paddingBottom: 48,
+	searchWrap: {
 		paddingHorizontal: spacing.xl,
-		alignItems: "center",
-		gap: 8,
-		borderBottomWidth: isDarkMode ? 0 : 1,
-		borderBottomColor: theme.border,
+		paddingBottom: spacing.md,
 	},
-	avatar: {
-		width: 80,
-		height: 80,
-		borderRadius: 999,
-		backgroundColor: isDarkMode ? "rgba(255,255,255,0.18)" : theme.surface,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	avatarIcon: {
-		fontSize: 38,
-	},
-	heroTitle: {
-		color: isDarkMode ? theme.white : theme.textPrimary,
-		fontSize: typography.lg,
-		fontWeight: typography.bold,
-	},
-	statusPill: {
+	search: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: isDarkMode ? "rgba(255,255,255,0.12)" : theme.surface,
-		paddingVertical: 4,
+		gap: spacing.sm,
+		height: 44,
 		paddingHorizontal: spacing.md,
-		borderRadius: radius.full,
-		gap: 6,
-	},
-	statusDot: {
-		color: "#22C55E",
-		fontSize: 12,
-	},
-	statusText: {
-		color: isDarkMode ? "rgba(255,255,255,0.82)" : theme.textSecondary,
-		fontSize: typography.sm,
-	},
-	cards: {
-		paddingHorizontal: spacing.xl,
-		paddingTop: spacing.xl,
-		gap: 12,
-	},
-	card: {
-		backgroundColor: theme.card,
-		borderColor: theme.border,
+		borderRadius: radius.md,
+		backgroundColor: theme.inputBackground,
 		borderWidth: 1,
-		borderRadius: radius.lg,
-		padding: spacing.md,
-		gap: 4,
+		borderColor: theme.inputBorder,
 	},
-	label: {
+	searchPlaceholder: {
+		fontSize: typography.base,
 		color: theme.textMuted,
-		fontSize: typography.xs,
-		fontWeight: typography.bold,
-		textTransform: "uppercase",
-		letterSpacing: typography.wide,
 	},
-	mono: {
-		color: theme.textPrimary,
-		fontSize: typography.sm,
-		fontFamily: "monospace",
-	},
-	value: {
-		color: theme.textPrimary,
-		fontSize: typography.sm,
-		fontWeight: typography.medium,
-	},
-	providerCard: {
-		backgroundColor: isDarkMode ? "#1B2736" : "#F3F8FF",
-		borderColor: isDarkMode ? "rgba(255,255,255,0.08)" : brand.tealBorder,
-		borderWidth: 1,
-		borderRadius: radius.lg,
-		padding: spacing.md,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 12,
-	},
-	providerBadge: {
-		width: 36,
-		height: 36,
-		borderRadius: 999,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.background,
-	},
-	providerBadgeText: {
-		color: theme.white,
-		fontSize: typography.base,
-		fontWeight: typography.bold,
-	},
-	providerLabel: {
-		color: isDarkMode ? "#A78BFA" : brand.tealDeep,
-		fontSize: typography.xs,
-		fontWeight: typography.bold,
-		textTransform: "uppercase",
-		letterSpacing: typography.wide,
-	},
-	providerValue: {
-		color: theme.textPrimary,
-		fontSize: typography.sm,
-		fontWeight: typography.bold,
-	},
-	signOutWrap: {
-		marginTop: "auto",
+	content: {
 		paddingHorizontal: spacing.xl,
-		paddingBottom: 48,
+		paddingBottom: spacing.xxl,
+		gap: spacing.md,
 	},
-	signOutButton: {
-		height: 56,
+	sectionTitle: {
+		fontSize: typography.md,
+		fontWeight: typography.bold,
+		color: theme.textPrimary,
+		marginTop: spacing.sm,
+	},
+	placeholderCard: {
+		padding: spacing.xl,
 		borderRadius: radius.lg,
-		alignItems: "center",
-		justifyContent: "center",
+		backgroundColor: theme.card,
 		borderWidth: 1,
-		borderColor: isDarkMode ? "rgba(248,113,113,0.25)" : "rgba(248,113,113,0.18)",
-		backgroundColor: isDarkMode ? "rgba(127,29,29,0.16)" : "#FFF1F2",
+		borderColor: theme.border,
+		alignItems: "center",
+		gap: spacing.xs,
 	},
-	signOutText: {
-		color: "#E11D48",
+	placeholderTitle: {
 		fontSize: typography.base,
 		fontWeight: typography.bold,
+		color: theme.textPrimary,
+	},
+	placeholderBody: {
+		fontSize: typography.base,
+		color: theme.textSecondary,
+		textAlign: "center",
+	},
+	emptyLine: {
+		fontSize: typography.base,
+		color: theme.textSecondary,
 	},
 });
