@@ -21,6 +21,9 @@ export interface Journey {
 	transportType: TransportMode;
 	serviceNumber: string;
 	serviceName?: string;
+	pnr?: string;
+	coachNumber?: string;
+	seatNo?: string;
 	journeyDate: string;
 	sourceLocation: string;
 	destinationLocation: string;
@@ -33,12 +36,24 @@ export interface JourneyListItem extends Journey {
 	isMember: boolean;
 }
 
+interface JourneyListResponseItem extends Journey {
+	memberCount: number | string;
+	isMember: boolean | string | null;
+}
+
+const toBoolean = (value: boolean | string | null): boolean =>
+	value === true || value === "true";
+
 export const listJourneys = async (transportType?: TransportMode): Promise<JourneyListItem[]> => {
-	const { data } = await api.get<JourneyListItem[]>("/journeys", {
+	const { data } = await api.get<JourneyListResponseItem[]>("/journeys", {
 		params: transportType ? { transportType } : undefined,
 	});
 
-	return data;
+	return data.map((journey) => ({
+		...journey,
+		memberCount: Number(journey.memberCount ?? 0),
+		isMember: toBoolean(journey.isMember),
+	}));
 };
 
 export const joinJourney = async (journeyId: string): Promise<void> => {

@@ -1,37 +1,108 @@
-import { Bus01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
+import { Bus01Icon, Cancel01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import React, { useState } from "react";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import React, { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
 	FlatList,
+	Modal,
 	Pressable,
 	RefreshControl,
 	StyleSheet,
 	Text,
+	TextInput,
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type { JourneyListItem } from "../api/journeys";
 import { Fab } from "../components/Fab";
 import { JourneyCard } from "../components/JourneyCard";
 import { ModeSwitcher } from "../components/ModeSwitcher";
 import { type QuickAction, QuickActionsMenu } from "../components/QuickActionsMenu";
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
 import { useJoinJourney, useJourneys } from "../hooks/useJourneys";
+import type { MainTabParamList } from "../navigation/MainTabNavigator";
+import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useModeStore } from "../store/modeStore";
 import { CreateJourneyModal } from "./Journeys/CreateJourneyModal";
 
+type HomeNavigation = CompositeNavigationProp<
+	BottomTabNavigationProp<MainTabParamList, "Home">,
+	NativeStackNavigationProp<RootStackParamList>
+>;
+
 export const HomeScreen: React.FC = () => {
+	const navigation = useNavigation<HomeNavigation>();
 	const mode = useModeStore((state) => state.mode);
 	const modeLabel = mode === "train" ? "train" : "bus";
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [createJourneyOpen, setCreateJourneyOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [journeyToJoin, setJourneyToJoin] = useState<JourneyListItem | null>(null);
 
 	const { data: journeys, isLoading, isRefetching, refetch, error } = useJourneys(mode);
 	const { mutate: join, isPending: joining, variables: joiningId } = useJoinJourney();
+	const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+	const searchActive = normalizedSearchQuery.length > 0;
+	const filteredJourneys = useMemo(() => {
+		const list = journeys ?? [];
 
-	const handleJoin = (journeyId: string) => {
-		join(journeyId, {
+		if (!normalizedSearchQuery) {
+			return list;
+		}
+
+		const terms = normalizedSearchQuery.split(/\s+/);
+
+		return list.filter((journey) => {
+			const searchable = [
+				journey.serviceNumber,
+				journey.serviceName,
+				journey.pnr,
+				journey.sourceLocation,
+				journey.destinationLocation,
+				journey.journeyDate,
+				String(journey.memberCount),
+			]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+
+			return terms.every((term) => searchable.includes(term));
+		});
+	}, [journeys, normalizedSearchQuery]);
+
+	const openJourneyChat = (journey: JourneyListItem) => {
+		navigation.navigate("JourneyGroupChat", { journey });
+	};
+
+	const handleJoinPress = (journey: JourneyListItem) => {
+		if (journey.isMember) {
+			openJourneyChat(journey);
+			return;
+		}
+
+		setJourneyToJoin(journey);
+	};
+
+	const handleConfirmJoin = () => {
+		if (!journeyToJoin) {
+			return;
+		}
+
+		const journey = journeyToJoin;
+
+		join(journey.journeyId, {
+			onSuccess: () => {
+				setJourneyToJoin(null);
+				openJourneyChat({
+					...journey,
+					isMember: true,
+					memberCount: journey.memberCount + 1,
+				});
+			},
 			onError: (cause: unknown) => {
 				const message = cause instanceof Error ? cause.message : "Something went wrong.";
 				Alert.alert("Could not join", message);
@@ -57,10 +128,37 @@ export const HomeScreen: React.FC = () => {
 			<ModeSwitcher />
 
 			<View style={styles.searchWrap}>
-				<Pressable style={styles.search} accessibilityRole="search">
+				<View style={styles.search}>
 					<HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.8} color={theme.textMuted} />
-					<Text style={styles.searchPlaceholder}>Search {modeLabel} number, route or PNR</Text>
-				</Pressable>
+					<TextInput
+						style={styles.searchInput}
+						value={searchQuery}
+						onChangeText={setSearchQuery}
+						placeholder={`Search ${modeLabel} number, route or PNR`}
+						placeholderTextColor={theme.textMuted}
+						autoCapitalize="none"
+						autoCorrect={false}
+						returnKeyType="search"
+						accessibilityRole="search"
+						accessibilityLabel={`Search ${modeLabel} journeys`}
+					/>
+					{searchActive ? (
+						<Pressable
+							style={styles.clearSearchButton}
+							onPress={() => setSearchQuery("")}
+							accessibilityRole="button"
+							accessibilityLabel="Clear search"
+							hitSlop={8}
+						>
+							<HugeiconsIcon
+								icon={Cancel01Icon}
+								size={16}
+								strokeWidth={1.8}
+								color={theme.textMuted}
+							/>
+						</Pressable>
+					) : null}
+				</View>
 			</View>
 
 			{isLoading ? (
@@ -69,7 +167,7 @@ export const HomeScreen: React.FC = () => {
 				</View>
 			) : (
 				<FlatList
-					data={journeys ?? []}
+					data={filteredJourneys}
 					keyExtractor={(item) => item.journeyId}
 					contentContainerStyle={styles.content}
 					showsVerticalScrollIndicator={false}
@@ -78,14 +176,14 @@ export const HomeScreen: React.FC = () => {
 					}
 					ListHeaderComponent={
 						<Text style={styles.sectionTitle}>
-							Upcoming {modeLabel} journeys
-							{journeys?.length ? ` (${journeys.length})` : ""}
+							{searchActive ? "Matching" : "Upcoming"} {modeLabel} journeys
+							{filteredJourneys.length ? ` (${filteredJourneys.length})` : ""}
 						</Text>
 					}
 					renderItem={({ item }) => (
 						<JourneyCard
 							journey={item}
-							onJoin={handleJoin}
+							onJoin={handleJoinPress}
 							// Only the row being joined shows a spinner.
 							joining={joining && joiningId === item.journeyId}
 						/>
@@ -99,12 +197,18 @@ export const HomeScreen: React.FC = () => {
 								color={brand.tealDeep}
 							/>
 							<Text style={styles.placeholderTitle}>
-								{error ? "Couldn't load journeys" : `No upcoming ${modeLabel} journeys`}
+								{error
+									? "Couldn't load journeys"
+									: searchActive
+										? "No matching journeys"
+										: `No upcoming ${modeLabel} journeys`}
 							</Text>
 							<Text style={styles.placeholderBody}>
 								{error
 									? "Pull down to try again."
-									: "Tap + to add one — fellow passengers on the same service will join you."}
+									: searchActive
+										? "Try a service number, route, date or PNR from another journey."
+										: "Tap + to add one — fellow passengers on the same service will join you."}
 							</Text>
 						</View>
 					}
@@ -123,6 +227,72 @@ export const HomeScreen: React.FC = () => {
 				active={actionsOpen}
 				accessibilityLabel="Create journey, parcel request and more"
 			/>
+
+			<Modal
+				visible={journeyToJoin !== null}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setJourneyToJoin(null)}
+			>
+				<View style={styles.modalOverlay}>
+					<Pressable style={styles.modalBackdrop} onPress={() => setJourneyToJoin(null)} />
+					<View style={styles.joinModal} accessibilityViewIsModal>
+						<Text style={styles.modalTitle}>Join chat?</Text>
+
+						{journeyToJoin ? (
+							<View style={styles.detailList}>
+								<View style={styles.detailRow}>
+									<Text style={styles.detailLabel}>Bus name</Text>
+									<Text style={styles.detailValue}>
+										{journeyToJoin.serviceName
+											? `${journeyToJoin.serviceNumber} · ${journeyToJoin.serviceName}`
+											: journeyToJoin.serviceNumber}
+									</Text>
+								</View>
+
+								<View style={styles.detailRow}>
+									<Text style={styles.detailLabel}>Source</Text>
+									<Text style={styles.detailValue}>{journeyToJoin.sourceLocation}</Text>
+								</View>
+
+								<View style={styles.detailRow}>
+									<Text style={styles.detailLabel}>Destination</Text>
+									<Text style={styles.detailValue}>{journeyToJoin.destinationLocation}</Text>
+								</View>
+
+								<View style={styles.detailRow}>
+									<Text style={styles.detailLabel}>Date</Text>
+									<Text style={styles.detailValue}>{journeyToJoin.journeyDate}</Text>
+								</View>
+							</View>
+						) : null}
+
+						<View style={styles.modalActions}>
+							<Pressable
+								style={[styles.modalButton, styles.cancelButton]}
+								onPress={() => setJourneyToJoin(null)}
+								disabled={joining}
+								accessibilityRole="button"
+							>
+								<Text style={styles.cancelButtonText}>Cancel</Text>
+							</Pressable>
+
+							<Pressable
+								style={[styles.modalButton, styles.confirmButton]}
+								onPress={handleConfirmJoin}
+								disabled={joining}
+								accessibilityRole="button"
+							>
+								{joining ? (
+									<ActivityIndicator size="small" color={theme.white} />
+								) : (
+									<Text style={styles.confirmButtonText}>Join</Text>
+								)}
+							</Pressable>
+						</View>
+					</View>
+				</View>
+			</Modal>
 
 			<CreateJourneyModal visible={createJourneyOpen} onClose={() => setCreateJourneyOpen(false)} />
 		</SafeAreaView>
@@ -149,9 +319,18 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: theme.inputBorder,
 	},
-	searchPlaceholder: {
+	searchInput: {
+		flex: 1,
+		height: "100%",
 		fontSize: typography.base,
-		color: theme.textMuted,
+		color: theme.textPrimary,
+		paddingVertical: 0,
+	},
+	clearSearchButton: {
+		width: 28,
+		height: 28,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	centered: {
 		flex: 1,
@@ -189,5 +368,77 @@ const styles = StyleSheet.create({
 		fontSize: typography.base,
 		color: theme.textSecondary,
 		textAlign: "center",
+	},
+	modalOverlay: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		padding: spacing.xl,
+		backgroundColor: "rgba(13,27,42,0.38)",
+	},
+	modalBackdrop: {
+		...StyleSheet.absoluteFillObject,
+	},
+	joinModal: {
+		width: "100%",
+		maxWidth: 360,
+		padding: spacing.lg,
+		borderRadius: radius.lg,
+		backgroundColor: theme.card,
+		borderWidth: 1,
+		borderColor: theme.border,
+		gap: spacing.md,
+	},
+	modalTitle: {
+		fontSize: typography.lg,
+		fontWeight: typography.bold,
+		color: theme.textPrimary,
+	},
+	detailList: {
+		gap: spacing.md,
+	},
+	detailRow: {
+		gap: spacing.xs,
+	},
+	detailLabel: {
+		fontSize: typography.sm,
+		fontWeight: typography.bold,
+		color: theme.textMuted,
+		textTransform: "uppercase",
+	},
+	detailValue: {
+		fontSize: typography.base,
+		color: theme.textPrimary,
+	},
+	modalActions: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		gap: spacing.sm,
+	},
+	modalButton: {
+		minWidth: 92,
+		height: 42,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: radius.md,
+		paddingHorizontal: spacing.md,
+	},
+	cancelButton: {
+		backgroundColor: theme.inputBackground,
+		borderWidth: 1,
+		borderColor: theme.inputBorder,
+	},
+	confirmButton: {
+		backgroundColor: brand.teal,
+	},
+	cancelButtonText: {
+		fontSize: typography.base,
+		fontWeight: typography.bold,
+		color: theme.textSecondary,
+	},
+	confirmButtonText: {
+		fontSize: typography.base,
+		fontWeight: typography.bold,
+		color: theme.white,
 	},
 });

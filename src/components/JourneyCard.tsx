@@ -26,66 +26,75 @@ const formatDate = (isoDate: string): string => {
 
 interface JourneyCardProps {
 	journey: JourneyListItem;
-	onJoin: (journeyId: string) => void;
+	onJoin: (journey: JourneyListItem) => void;
 	joining?: boolean;
 }
 
-export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joining = false }) => (
-	<View style={styles.card}>
-		<View style={styles.topRow}>
-			<HugeiconsIcon
-				icon={journey.transportType === "train" ? Train01Icon : Bus01Icon}
-				size={18}
-				strokeWidth={1.8}
-				color={brand.tealDeep}
-			/>
-			<Text style={styles.service} numberOfLines={1}>
-				{journey.serviceNumber}
-				{journey.serviceName ? ` · ${journey.serviceName}` : ""}
-			</Text>
-		</View>
+export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joining = false }) => {
+	const isMember = journey.isMember === true;
 
-		<View style={styles.route}>
-			<Text style={styles.place} numberOfLines={1}>
-				{journey.sourceLocation}
-			</Text>
-			<HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={1.8} color={theme.textMuted} />
-			<Text style={styles.place} numberOfLines={1}>
-				{journey.destinationLocation}
-			</Text>
-		</View>
-
-		<View style={styles.metaRow}>
-			<View style={styles.meta}>
-				<HugeiconsIcon icon={Calendar03Icon} size={14} strokeWidth={1.8} color={theme.textMuted} />
-				<Text style={styles.metaText}>{formatDate(journey.journeyDate)}</Text>
-			</View>
-
-			<View style={styles.meta}>
-				<HugeiconsIcon icon={UserGroupIcon} size={14} strokeWidth={1.8} color={theme.textMuted} />
-				<Text style={styles.metaText}>
-					{journey.memberCount} {journey.memberCount === 1 ? "traveller" : "travellers"}
+	return (
+		<View style={styles.card}>
+			<View style={styles.topRow}>
+				<HugeiconsIcon
+					icon={journey.transportType === "train" ? Train01Icon : Bus01Icon}
+					size={18}
+					strokeWidth={1.8}
+					color={brand.tealDeep}
+				/>
+				<Text style={styles.service} numberOfLines={1}>
+					{journey.serviceNumber}
+					{journey.serviceName ? ` · ${journey.serviceName}` : ""}
 				</Text>
 			</View>
 
-			<Pressable
-				style={[styles.joinButton, journey.isMember && styles.joinedButton]}
-				onPress={() => onJoin(journey.journeyId)}
-				disabled={joining}
-				accessibilityRole="button"
-				accessibilityLabel={journey.isMember ? "Open chat" : "Join chat"}
-			>
-				{joining ? (
-					<ActivityIndicator size="small" color={theme.white} />
-				) : (
-					<Text style={[styles.joinText, journey.isMember && styles.joinedText]}>
-						{journey.isMember ? "Open chat" : "Join chat"}
+			<View style={styles.route}>
+				<Text style={styles.place} numberOfLines={1}>
+					{journey.sourceLocation}
+				</Text>
+				<HugeiconsIcon
+					icon={ArrowRight01Icon}
+					size={16}
+					strokeWidth={1.8}
+					color={theme.textMuted}
+				/>
+				<Text style={styles.place} numberOfLines={1}>
+					{journey.destinationLocation}
+				</Text>
+			</View>
+
+			<View style={styles.metaRow}>
+				<View style={styles.meta}>
+					<HugeiconsIcon icon={Calendar03Icon} size={14} strokeWidth={1.8} color={theme.textMuted} />
+					<Text style={styles.metaText}>{formatDate(journey.journeyDate)}</Text>
+				</View>
+
+				<View style={styles.meta}>
+					<HugeiconsIcon icon={UserGroupIcon} size={14} strokeWidth={1.8} color={theme.textMuted} />
+					<Text style={styles.metaText}>
+						{journey.memberCount} {journey.memberCount === 1 ? "traveller" : "travellers"}
 					</Text>
-				)}
-			</Pressable>
+				</View>
+
+				<Pressable
+					style={[styles.joinButton, isMember && styles.joinedButton]}
+					onPress={() => onJoin(journey)}
+					disabled={joining}
+					accessibilityRole="button"
+					accessibilityLabel={isMember ? "Open chat" : "Join chat"}
+				>
+					{joining ? (
+						<ActivityIndicator size="small" color={theme.white} />
+					) : (
+						<Text style={[styles.joinText, isMember && styles.joinedText]}>
+							{isMember ? "Open chat" : "Join chat"}
+						</Text>
+					)}
+				</Pressable>
+			</View>
 		</View>
-	</View>
-);
+	);
+};
 
 const styles = StyleSheet.create({
 	card: {
