@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { brand, theme } from "../constants/theme";
 import { useCurrentUser, useFirebaseAuth } from "../hooks/useUser";
 import type { JourneyListItem } from "../api/journeys";
+import { GroupChatSocketProvider } from "../providers/GroupChatSocketProvider";
 import { JourneyGroupChatScreen } from "../screens/Chats/JourneyGroupChatScreen";
 import { OtpScreen } from "../screens/OtpScreen";
 import { PhoneScreen } from "../screens/PhoneScreen";
@@ -52,32 +53,33 @@ export const RootNavigator = () => {
 	// isError covers a restored Firebase session whose backend user is gone or whose token
 	// no longer verifies — both need the phone flow again, not a half-loaded Home.
 	const signedIn = uid !== null && !isError && user !== undefined;
+	const stackOptions = {
+		headerShown: false,
+		animation: "slide_from_right" as const,
+		contentStyle: { backgroundColor: theme.background },
+	};
 
 	return (
 		<NavigationContainer theme={navigationTheme}>
-			<Stack.Navigator
-				screenOptions={{
-					headerShown: false,
-					animation: "slide_from_right",
-					contentStyle: { backgroundColor: theme.background },
-				}}
-			>
-				{signedIn ? (
-					user.onBoardingStatus === "profile_created" ? (
-						<>
-							<Stack.Screen name="Main" component={MainTabNavigator} />
-							<Stack.Screen name="JourneyGroupChat" component={JourneyGroupChatScreen} />
-						</>
-					) : (
+			{signedIn && user.onBoardingStatus === "profile_created" ? (
+				<GroupChatSocketProvider>
+					<Stack.Navigator screenOptions={stackOptions}>
+						<Stack.Screen name="Main" component={MainTabNavigator} />
+						<Stack.Screen name="JourneyGroupChat" component={JourneyGroupChatScreen} />
+					</Stack.Navigator>
+				</GroupChatSocketProvider>
+			) : (
+				<Stack.Navigator screenOptions={stackOptions}>
+					{signedIn ? (
 						<Stack.Screen name="Profile" component={ProfileCreation} />
-					)
-				) : (
-					<>
-						<Stack.Screen name="Phone" component={PhoneScreen} />
-						<Stack.Screen name="Otp" component={OtpScreen} />
-					</>
-				)}
-			</Stack.Navigator>
+					) : (
+						<>
+							<Stack.Screen name="Phone" component={PhoneScreen} />
+							<Stack.Screen name="Otp" component={OtpScreen} />
+						</>
+					)}
+				</Stack.Navigator>
+			)}
 		</NavigationContainer>
 	);
 };

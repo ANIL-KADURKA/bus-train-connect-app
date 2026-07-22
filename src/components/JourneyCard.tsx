@@ -32,6 +32,7 @@ interface JourneyCardProps {
 
 export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joining = false }) => {
 	const isMember = journey.isMember === true;
+	console.log("JourneyCard isMember:", isMember, "journey:", journey);
 
 	return (
 		<View style={styles.card}>
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
 	},
 	joinButton: {
 		marginLeft: "auto",
-		paddingHorizontal: spacing.md,
+		paddingHorizontal: spacing.sm,
 		paddingVertical: spacing.sm,
 		borderRadius: radius.full,
 		backgroundColor: brand.teal,
