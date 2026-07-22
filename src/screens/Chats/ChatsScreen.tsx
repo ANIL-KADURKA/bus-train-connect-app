@@ -14,6 +14,7 @@ import { useAllJourneys } from "../../hooks/useJourneys";
 import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { useBadgeStore } from "../../store/badgeStore";
+import { useGroupChatStore } from "../../store/groupChatStore";
 
 type ChatsTab = "journeys" | "dms";
 
@@ -51,6 +52,7 @@ export const ChatsScreen: React.FC = () => {
 	const navigation = useNavigation<ChatsNavigation>();
 	const [tab, setTab] = useState<ChatsTab>("journeys");
 	const pendingChatRequests = useBadgeStore((state) => state.pendingChatRequests);
+	const unreadByJourney = useGroupChatStore((state) => state.unreadByJourney);
 	const { data: journeys, isLoading: journeysLoading } = useAllJourneys();
 
 	const journeyChats = (journeys ?? []).filter((journey) => journey.isMember);
@@ -74,7 +76,7 @@ export const ChatsScreen: React.FC = () => {
 							title={journeyChatTitle(item)}
 							subtitle={`${item.sourceLocation} to ${item.destinationLocation}`}
 							timestamp={item.journeyDate}
-							unreadCount={0}
+							unreadCount={unreadByJourney[item.journeyId] ?? 0}
 							icon={item.transportType === "train" ? Train01Icon : Bus01Icon}
 							onPress={() => navigation.navigate("JourneyGroupChat", { journey: item })}
 						/>
