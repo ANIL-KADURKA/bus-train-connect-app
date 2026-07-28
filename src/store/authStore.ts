@@ -1,4 +1,4 @@
-import type { ConfirmationResult } from "firebase/auth";
+import type { ConfirmationResult } from "@firebase/auth";
 import { create } from "zustand";
 import type { AuthUserDto } from "../dto/user.dto";
 

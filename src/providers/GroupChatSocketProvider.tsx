@@ -1,13 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { getAuth } from "firebase/auth";
+
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { api } from "../api/axios";
 import type { GroupMessage } from "../api/groupMessages";
 import { useAllJourneys } from "../hooks/useJourneys";
+import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
+import { firebaseAuth } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
 import { useGroupChatStore } from "../store/groupChatStore";
-import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
 
 const socketUrl = String(api.defaults.baseURL ?? "").replace(/\/$/, "");
 
@@ -41,14 +42,12 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 		() => (journeys ?? []).filter((journey) => journey.isMember),
 		[journeys],
 	);
-	const joinedJourneyIdKey = joinedJourneys.map((journey) => journey.journeyId).sort().join("|");
-
 	useEffect(() => {
 		let cancelled = false;
 		let nextSocket: Socket | null = null;
 
 		const connect = async () => {
-			const token = await getAuth().currentUser?.getIdToken();
+			const token = await firebaseAuth.currentUser?.getIdToken();
 
 			if (!token || cancelled) {
 				console.log("[group-chat] app socket connect skipped", {
@@ -142,7 +141,7 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 		for (const journey of joinedJourneys) {
 			joinJourneyChat(journey.journeyId);
 		}
-	}, [isConnected, joinedJourneyIdKey, joinedJourneys, joinJourneyChat]);
+	}, [isConnected, joinedJourneys, joinJourneyChat]);
 
 	const sendMessage = useCallback(
 		(journeyId: string, text: string) => {
@@ -158,13 +157,17 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 				return;
 			}
 
-			socket.emit("journey:message", { journeyId, text: trimmed }, (response?: { ok?: boolean }) => {
-				console.log("[group-chat] app received journey:message ack", {
-					journeyId,
-					socketId: socket.id,
-					ok: response?.ok === true,
-				});
-			});
+			socket.emit(
+				"journey:message",
+				{ journeyId, text: trimmed },
+				(response?: { ok?: boolean }) => {
+					console.log("[group-chat] app received journey:message ack", {
+						journeyId,
+						socketId: socket.id,
+						ok: response?.ok === true,
+					});
+				},
+			);
 			console.log("[group-chat] app emitted journey:message", {
 				journeyId,
 				socketId: socket.id,

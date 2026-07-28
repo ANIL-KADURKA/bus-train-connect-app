@@ -1,20 +1,16 @@
-import {
-	type ApplicationVerifier,
-	type ConfirmationResult,
-	signInWithPhoneNumber,
-} from "firebase/auth";
+import { type ApplicationVerifier, type ConfirmationResult, signInWithPhoneNumber } from "@firebase/auth";
 import type { AuthUserDto } from "../dto/user.dto";
-import { auth } from "../lib/firebase";
+import { firebaseAuth } from "../lib/firebase";
 import { api } from "./axios";
 
 export const sendOtp = async ({
 	phone,
-	recaptchaVerifier,
+	verifier,
 }: {
 	phone: string;
-	recaptchaVerifier: ApplicationVerifier;
+	verifier: ApplicationVerifier;
 }): Promise<ConfirmationResult> => {
-	return signInWithPhoneNumber(auth, phone, recaptchaVerifier);
+	return signInWithPhoneNumber(firebaseAuth, phone, verifier);
 };
 
 export const verifyOtp = async ({

@@ -19,7 +19,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.anonymous.btc"
+      "package": "bustrainconnect.firebaseapp.com",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -27,6 +31,11 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-audio"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "04a1c26c-f735-4c28-af8f-fcbcc5344943"
+      }
+    }
   }
 }
