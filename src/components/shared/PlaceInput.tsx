@@ -30,8 +30,12 @@ const fetchSuggestions = async (input: string): Promise<Suggestion[]> => {
 			"Content-Type": "application/json",
 			"X-Goog-Api-Key": API_KEY ?? "",
 		},
-		// Biased to India, matching where the service operates.
-		body: JSON.stringify({ input, includedRegionCodes: ["in"] }),
+		// Restrict suggestions to Indian cities.
+		body: JSON.stringify({
+			input,
+			includedPrimaryTypes: ["(cities)"],
+			includedRegionCodes: ["in"],
+		}),
 	});
 
 	if (!response.ok) {
@@ -55,8 +59,7 @@ interface PlaceInputProps {
 }
 
 /**
- * Google Places autocomplete. A single field is enough — the returned description
- * already includes city and state, so no separate State picker is needed.
+ * Google Places autocomplete for Indian cities.
  */
 export const PlaceInput: React.FC<PlaceInputProps> = ({ value, onChange, placeholder }) => {
 	const [query, setQuery] = useState(value);

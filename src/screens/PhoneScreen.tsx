@@ -1,7 +1,6 @@
+import type { ApplicationVerifier, ConfirmationResult } from "@firebase/auth";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import type { ApplicationVerifier, ConfirmationResult } from "firebase/auth";
 import type { FC } from "react";
 import React, { useRef, useState } from "react";
 import {
@@ -16,6 +15,7 @@ import {
 	TextInput,
 	View,
 } from "react-native";
+import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { sendOtp } from "../api/auth";
 import { TransitHero } from "../components/TrainBusHero";
@@ -23,7 +23,7 @@ import { getFirebaseAuthErrorMessage } from "../constants/error.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
 import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
-import app from "../lib/firebase";
+import { firebaseConfig } from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useAuthStore } from "../store/authStore";
 import { sanitizePhoneNumber, validatePhoneNumber } from "../utils/phone.utils";
@@ -35,14 +35,14 @@ type Props = {
 const country_code = default_country.code;
 
 export const PhoneScreen: FC<Props> = ({ navigation }) => {
-	const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
 	const [phone, setPhone] = useState("");
+	const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 	const { setConfirmation, setPhone: storePhone } = useAuthStore();
 
 	const { mutate, isPending } = useMutation<
 		ConfirmationResult,
 		Error,
-		{ phone: string; recaptchaVerifier: ApplicationVerifier }
+		{ phone: string; verifier: ApplicationVerifier }
 	>({
 		mutationFn: sendOtp,
 		onSuccess: (confirmation: ConfirmationResult, variables) => {
@@ -58,29 +58,30 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 	const canSend = validatePhoneNumber(phone, country_code);
 
 	const handleSendOtp = () => {
-		const recaptchaVerifier = recaptchaRef.current;
-		if (!recaptchaVerifier) {
-			return Alert.alert("Error", "Recaptcha is not ready yet.");
+		const verifier = recaptchaVerifier.current;
+
+		if (!verifier) {
+			Alert.alert("Error", "Verification is still loading. Please try again.");
+			return;
 		}
 
 		mutate({
 			phone: sanitizePhoneNumber(country_code, phone),
-			recaptchaVerifier,
+			verifier,
 		});
 	};
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+			<FirebaseRecaptchaVerifierModal
+				ref={recaptchaVerifier}
+				firebaseConfig={firebaseConfig}
+				attemptInvisibleVerification
+			/>
 			<KeyboardAvoidingView
 				behavior={Platform.OS === platform.IOS ? "padding" : "height"}
 				style={styles.root}
 			>
-				<FirebaseRecaptchaVerifierModal
-					ref={recaptchaRef}
-					firebaseConfig={app.options}
-					attemptInvisibleVerification
-				/>
-
 				<ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 					<TransitHero height={150} />
 					<View style={styles.heroText}>

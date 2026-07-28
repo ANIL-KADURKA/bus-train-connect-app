@@ -1,3 +1,4 @@
+import { onAuthStateChanged, signOut } from "@firebase/auth";
 import {
 	type UseMutationResult,
 	type UseQueryResult,
@@ -5,11 +6,11 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { getCurrentUser, login } from "../api/auth";
 import { type UpdateProfileInput, updateMyProfile } from "../api/users";
 import type { AuthUserDto } from "../dto/user.dto";
+import { firebaseAuth } from "../lib/firebase";
 import { useAuthStore } from "../store/authStore";
 
 export const userKeys = {
@@ -33,7 +34,7 @@ export const useFirebaseAuth = (): FirebaseAuthState => {
 	const [state, setState] = useState<FirebaseAuthState>({ uid: null, ready: false });
 
 	useEffect(() => {
-		return onAuthStateChanged(getAuth(), (firebaseUser) => {
+		return onAuthStateChanged(firebaseAuth, (firebaseUser) => {
 			setState({ uid: firebaseUser?.uid ?? null, ready: true });
 		});
 	}, []);
@@ -108,7 +109,7 @@ export const useSignOut = (): (() => Promise<void>) => {
 	const reset = useAuthStore((state) => state.reset);
 
 	return async () => {
-		await signOut(getAuth());
+		await signOut(firebaseAuth);
 		queryClient.removeQueries({ queryKey: userKeys.all });
 		reset();
 	};

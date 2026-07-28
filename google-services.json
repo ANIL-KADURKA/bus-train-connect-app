@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1023987061561",
+    "project_id": "hi-bus-connect",
+    "storage_bucket": "hi-bus-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1023987061561:android:cb90f60f269901088f0ee8",
+        "android_client_info": {
+          "package_name": "bustrainconnect.firebaseapp.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKkPxmyBUbTBrFiQA2JusLFOBXGQKVzKg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
