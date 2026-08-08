@@ -10,19 +10,13 @@ import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import type { JourneyListItem } from "../api/journeys";
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
+import { formatShortDate } from "../utils/date.utils";
 
-/** "2026-07-21" -> "21 Jul". Kept local so no date library is needed. */
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const formatDate = (isoDate: string): string => {
-	const [year, month, day] = isoDate.split("-").map(Number);
-
-	if (!year || !month || !day) {
-		return isoDate;
-	}
-
-	return `${day} ${MONTHS[month - 1]}`;
-};
+/**
+ * How far this journey's endpoint is from what the user searched for. Only a route
+ * search produces distances, and "0.4 km" reads better than "0.0 km" for a direct hit.
+ */
+const formatDistance = (km: number): string => (km < 0.5 ? "here" : `${km.toFixed(1)} km`);
 
 interface JourneyCardProps {
 	journey: JourneyListItem;
@@ -32,7 +26,8 @@ interface JourneyCardProps {
 
 export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joining = false }) => {
 	const isMember = journey.isMember === true;
-	console.log("JourneyCard isMember:", isMember, "journey:", journey);
+	const { sourceDistanceKm, destinationDistanceKm } = journey;
+	const showDistances = sourceDistanceKm !== undefined && destinationDistanceKm !== undefined;
 
 	return (
 		<View style={styles.card}>
@@ -44,7 +39,7 @@ export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joini
 					color={brand.tealDeep}
 				/>
 				<Text style={styles.service} numberOfLines={1}>
-					{journey.serviceNumber}
+					{journey.registrationNumber}
 					{journey.serviceName ? ` · ${journey.serviceName}` : ""}
 				</Text>
 			</View>
@@ -64,10 +59,22 @@ export const JourneyCard: React.FC<JourneyCardProps> = ({ journey, onJoin, joini
 				</Text>
 			</View>
 
+			{showDistances ? (
+				<Text style={styles.distance}>
+					{formatDistance(sourceDistanceKm)} from your boarding city ·{" "}
+					{formatDistance(destinationDistanceKm)} from your drop city
+				</Text>
+			) : null}
+
 			<View style={styles.metaRow}>
 				<View style={styles.meta}>
-					<HugeiconsIcon icon={Calendar03Icon} size={14} strokeWidth={1.8} color={theme.textMuted} />
-					<Text style={styles.metaText}>{formatDate(journey.journeyDate)}</Text>
+					<HugeiconsIcon
+						icon={Calendar03Icon}
+						size={14}
+						strokeWidth={1.8}
+						color={theme.textMuted}
+					/>
+					<Text style={styles.metaText}>{formatShortDate(journey.journeyDate)}</Text>
 				</View>
 
 				<View style={styles.meta}>
@@ -126,6 +133,10 @@ const styles = StyleSheet.create({
 		flex: 1,
 		fontSize: typography.base,
 		color: theme.textSecondary,
+	},
+	distance: {
+		fontSize: typography.sm,
+		color: brand.tealDeep,
 	},
 	metaRow: {
 		flexDirection: "row",

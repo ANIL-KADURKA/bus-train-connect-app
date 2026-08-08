@@ -10,25 +10,55 @@ import {
 	type CreateJourneyResult,
 	createJourney,
 	type JourneyListItem,
+	type JourneySearch,
 	joinJourney,
 	listJourneys,
 } from "../api/journeys";
 import type { TransportMode } from "../store/modeStore";
 import { useFirebaseAuth } from "./useUser";
 
-export const journeyKeys = {
-	all: ["journeys"] as const,
-	list: (transportType: TransportMode) => [...journeyKeys.all, "list", transportType] as const,
-	allList: () => [...journeyKeys.all, "list", "all"] as const,
+/**
+ * Stable cache key for a search. Only the fields the backend actually filters on, so
+ * re-picking the same city from a different suggestion does not refetch.
+ */
+const searchKey = (search?: JourneySearch): unknown => {
+	if (!search) {
+		return null;
+	}
+
+	return search.kind === "registration"
+		? { kind: "registration", registrationNumber: search.registrationNumber }
+		: {
+				kind: "route",
+				journeyDate: search.journeyDate,
+				source: [search.source.latitude, search.source.longitude],
+				destination: [search.destination.latitude, search.destination.longitude],
+			};
 };
 
-/** GET /journeys — upcoming journeys for the active transport mode, soonest first. */
-export const useJourneys = (transportType: TransportMode): UseQueryResult<JourneyListItem[]> => {
+export const journeyKeys = {
+	all: ["journeys"] as const,
+	list: (transportType: TransportMode, search?: JourneySearch) =>
+		[...journeyKeys.all, "list", transportType, searchKey(search)] as const,
+	allList: () => [...journeyKeys.all, "list", "all", null] as const,
+};
+
+/**
+ * GET /journeys — upcoming journeys for the active transport mode.
+ *
+ * With no `search` this is the browse list, soonest first. With one it is the Home
+ * search: by route (each end within the backend's radius, on a given date) or by
+ * registration number.
+ */
+export const useJourneys = (
+	transportType: TransportMode,
+	search?: JourneySearch,
+): UseQueryResult<JourneyListItem[]> => {
 	const { uid, ready } = useFirebaseAuth();
 
 	return useQuery({
-		queryKey: journeyKeys.list(transportType),
-		queryFn: () => listJourneys(transportType),
+		queryKey: journeyKeys.list(transportType, search),
+		queryFn: () => listJourneys(transportType, search),
 		enabled: ready && uid !== null,
 	});
 };

@@ -1,7 +1,7 @@
 import { Bus01Icon, Message01Icon, SentIcon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
+import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -37,8 +37,10 @@ type ChatsNavigation = CompositeNavigationProp<
 	NativeStackNavigationProp<RootStackParamList>
 >;
 
-const journeyChatTitle = (journey: { serviceNumber: string; serviceName?: string }): string =>
-	journey.serviceName ? `${journey.serviceNumber} · ${journey.serviceName}` : journey.serviceNumber;
+const journeyChatTitle = (journey: { registrationNumber: string; serviceName?: string }): string =>
+	journey.serviceName
+		? `${journey.registrationNumber} · ${journey.serviceName}`
+		: journey.registrationNumber;
 
 const EmptyState: React.FC<{ title: string; body: string }> = ({ title, body }) => (
 	<View style={styles.empty}>

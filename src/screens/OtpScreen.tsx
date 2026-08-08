@@ -1,6 +1,7 @@
 import type { ApplicationVerifier, ConfirmationResult } from "@firebase/auth";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import type { FC } from "react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -14,7 +15,6 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { sendOtp, verifyOtp } from "../api/auth";
 import { OtpInput } from "../components/OtpInput";

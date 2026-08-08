@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { listGroupMessages, type GroupMessage } from "../api/groupMessages";
+import { type GroupMessage, listGroupMessages } from "../api/groupMessages";
 import { groupMessageKeys } from "../lib/groupMessagesCache";
 import { useGroupChatSocket } from "../providers/GroupChatSocketProvider";
 import { useGroupChatStore } from "../store/groupChatStore";
