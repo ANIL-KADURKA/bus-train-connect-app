@@ -2,7 +2,7 @@ import axios, { type AxiosError, AxiosHeaders, type InternalAxiosRequestConfig }
 import { firebaseAuth } from "../lib/firebase";
 
 export const api = axios.create({
-	baseURL: "https://cb08-2409-40f0-6053-fb25-c470-4593-e02d-8305.ngrok-free.app",
+	baseURL: "https://b4a8-2409-40f0-6415-6638-813e-116d-18bb-6ae9.ngrok-free.app",
 	timeout: 10_000,
 	headers: {
 		"Content-Type": "application/json",

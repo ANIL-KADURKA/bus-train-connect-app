@@ -5,8 +5,8 @@ import { io, type Socket } from "socket.io-client";
 import { api } from "../api/axios";
 import type { GroupMessage } from "../api/groupMessages";
 import { useAllJourneys } from "../hooks/useJourneys";
-import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
 import { firebaseAuth } from "../lib/firebase";
+import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
 import { useAuthStore } from "../store/authStore";
 import { useGroupChatStore } from "../store/groupChatStore";
 

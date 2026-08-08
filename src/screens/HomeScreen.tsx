@@ -1,9 +1,9 @@
 import { Bus01Icon, Cancel01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
+import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -13,11 +13,10 @@ import {
 	RefreshControl,
 	StyleSheet,
 	Text,
-	TextInput,
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { JourneyListItem } from "../api/journeys";
+import type { JourneyListItem, JourneySearch } from "../api/journeys";
 import { Fab } from "../components/Fab";
 import { JourneyCard } from "../components/JourneyCard";
 import { ModeSwitcher } from "../components/ModeSwitcher";
@@ -27,12 +26,22 @@ import { useJoinJourney, useJourneys } from "../hooks/useJourneys";
 import type { MainTabParamList } from "../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useModeStore } from "../store/modeStore";
+import { formatShortDate } from "../utils/date.utils";
 import { CreateJourneyModal } from "./Journeys/CreateJourneyModal";
+import { SearchJourneysModal } from "./Journeys/SearchJourneysModal";
 
 type HomeNavigation = CompositeNavigationProp<
 	BottomTabNavigationProp<MainTabParamList, "Home">,
 	NativeStackNavigationProp<RootStackParamList>
 >;
+
+/** "Hyderabad, Telangana, India" -> "Hyderabad", so the search bar stays readable. */
+const shortPlace = (text: string): string => text.split(",")[0].trim();
+
+const searchSummary = (search: JourneySearch): string =>
+	search.kind === "registration"
+		? search.registrationNumber
+		: `${shortPlace(search.source.text)} → ${shortPlace(search.destination.text)} · ${formatShortDate(search.journeyDate)}`;
 
 export const HomeScreen: React.FC = () => {
 	const navigation = useNavigation<HomeNavigation>();
@@ -40,39 +49,20 @@ export const HomeScreen: React.FC = () => {
 	const modeLabel = mode === "train" ? "train" : "bus";
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [createJourneyOpen, setCreateJourneyOpen] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
+	const [searchOpen, setSearchOpen] = useState(false);
+	const [search, setSearch] = useState<JourneySearch | null>(null);
 	const [journeyToJoin, setJourneyToJoin] = useState<JourneyListItem | null>(null);
 
-	const { data: journeys, isLoading, isRefetching, refetch, error } = useJourneys(mode);
+	const {
+		data: journeys,
+		isLoading,
+		isRefetching,
+		refetch,
+		error,
+	} = useJourneys(mode, search ?? undefined);
 	const { mutate: join, isPending: joining, variables: joiningId } = useJoinJourney();
-	const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-	const searchActive = normalizedSearchQuery.length > 0;
-	const filteredJourneys = useMemo(() => {
-		const list = journeys ?? [];
-
-		if (!normalizedSearchQuery) {
-			return list;
-		}
-
-		const terms = normalizedSearchQuery.split(/\s+/);
-
-		return list.filter((journey) => {
-			const searchable = [
-				journey.serviceNumber,
-				journey.serviceName,
-				journey.pnr,
-				journey.sourceLocation,
-				journey.destinationLocation,
-				journey.journeyDate,
-				String(journey.memberCount),
-			]
-				.filter(Boolean)
-				.join(" ")
-				.toLowerCase();
-
-			return terms.every((term) => searchable.includes(term));
-		});
-	}, [journeys, normalizedSearchQuery]);
+	const searchActive = search !== null;
+	const results = journeys ?? [];
 
 	const openJourneyChat = (journey: JourneyListItem) => {
 		navigation.navigate("JourneyGroupChat", { journey });
@@ -128,24 +118,23 @@ export const HomeScreen: React.FC = () => {
 			<ModeSwitcher />
 
 			<View style={styles.searchWrap}>
-				<View style={styles.search}>
+				<Pressable
+					style={styles.search}
+					onPress={() => setSearchOpen(true)}
+					accessibilityRole="search"
+					accessibilityLabel={`Search ${modeLabel} journeys`}
+				>
 					<HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.8} color={theme.textMuted} />
-					<TextInput
-						style={styles.searchInput}
-						value={searchQuery}
-						onChangeText={setSearchQuery}
-						placeholder={`Search ${modeLabel} number, route or PNR`}
-						placeholderTextColor={theme.textMuted}
-						autoCapitalize="none"
-						autoCorrect={false}
-						returnKeyType="search"
-						accessibilityRole="search"
-						accessibilityLabel={`Search ${modeLabel} journeys`}
-					/>
+					<Text
+						style={[styles.searchText, !searchActive && styles.searchPlaceholder]}
+						numberOfLines={1}
+					>
+						{search ? searchSummary(search) : `Search by route or ${modeLabel} number`}
+					</Text>
 					{searchActive ? (
 						<Pressable
 							style={styles.clearSearchButton}
-							onPress={() => setSearchQuery("")}
+							onPress={() => setSearch(null)}
 							accessibilityRole="button"
 							accessibilityLabel="Clear search"
 							hitSlop={8}
@@ -158,7 +147,7 @@ export const HomeScreen: React.FC = () => {
 							/>
 						</Pressable>
 					) : null}
-				</View>
+				</Pressable>
 			</View>
 
 			{isLoading ? (
@@ -167,7 +156,7 @@ export const HomeScreen: React.FC = () => {
 				</View>
 			) : (
 				<FlatList
-					data={filteredJourneys}
+					data={results}
 					keyExtractor={(item) => item.journeyId}
 					contentContainerStyle={styles.content}
 					showsVerticalScrollIndicator={false}
@@ -177,7 +166,7 @@ export const HomeScreen: React.FC = () => {
 					ListHeaderComponent={
 						<Text style={styles.sectionTitle}>
 							{searchActive ? "Matching" : "Upcoming"} {modeLabel} journeys
-							{filteredJourneys.length ? ` (${filteredJourneys.length})` : ""}
+							{results.length ? ` (${results.length})` : ""}
 						</Text>
 					}
 					renderItem={({ item }) => (
@@ -206,9 +195,11 @@ export const HomeScreen: React.FC = () => {
 							<Text style={styles.placeholderBody}>
 								{error
 									? "Pull down to try again."
-									: searchActive
-										? "Try a service number, route, date or PNR from another journey."
-										: "Tap + to add one — fellow passengers on the same service will join you."}
+									: search?.kind === "route"
+										? "No journey found for that route and date. Try another date, or add the journey yourself."
+										: search?.kind === "registration"
+											? `No upcoming journey for that ${modeLabel} number yet. Tap + to add it.`
+											: "Tap + to add one — fellow passengers on the same vehicle will join you."}
 							</Text>
 						</View>
 					}
@@ -242,11 +233,11 @@ export const HomeScreen: React.FC = () => {
 						{journeyToJoin ? (
 							<View style={styles.detailList}>
 								<View style={styles.detailRow}>
-									<Text style={styles.detailLabel}>Bus name</Text>
+									<Text style={styles.detailLabel}>{mode === "train" ? "Train" : "Bus"}</Text>
 									<Text style={styles.detailValue}>
 										{journeyToJoin.serviceName
-											? `${journeyToJoin.serviceNumber} · ${journeyToJoin.serviceName}`
-											: journeyToJoin.serviceNumber}
+											? `${journeyToJoin.registrationNumber} · ${journeyToJoin.serviceName}`
+											: journeyToJoin.registrationNumber}
 									</Text>
 								</View>
 
@@ -295,6 +286,21 @@ export const HomeScreen: React.FC = () => {
 			</Modal>
 
 			<CreateJourneyModal visible={createJourneyOpen} onClose={() => setCreateJourneyOpen(false)} />
+
+			<SearchJourneysModal
+				visible={searchOpen}
+				mode={mode}
+				current={search}
+				onClose={() => setSearchOpen(false)}
+				onApply={(next) => {
+					setSearch(next);
+					setSearchOpen(false);
+				}}
+				onClear={() => {
+					setSearch(null);
+					setSearchOpen(false);
+				}}
+			/>
 		</SafeAreaView>
 	);
 };
@@ -319,12 +325,13 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: theme.inputBorder,
 	},
-	searchInput: {
+	searchText: {
 		flex: 1,
-		height: "100%",
 		fontSize: typography.base,
 		color: theme.textPrimary,
-		paddingVertical: 0,
+	},
+	searchPlaceholder: {
+		color: theme.textMuted,
 	},
 	clearSearchButton: {
 		width: 28,

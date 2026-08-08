@@ -3,11 +3,20 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { radius, spacing, theme, typography } from "../../constants/theme";
 
 const AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
+const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places";
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 3;
 
 /** Expo inlines EXPO_PUBLIC_* at build time. */
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+
+/** A place the user has committed to, with the coordinates radius search needs. */
+export interface SelectedPlace {
+	placeId: string;
+	text: string;
+	latitude: number;
+	longitude: number;
+}
 
 interface Suggestion {
 	placeId: string;
@@ -21,6 +30,10 @@ interface AutocompleteResponse {
 			text?: { text?: string };
 		};
 	}[];
+}
+
+interface PlaceDetailsResponse {
+	location?: { latitude?: number; longitude?: number };
 }
 
 const fetchSuggestions = async (input: string): Promise<Suggestion[]> => {
@@ -52,19 +65,53 @@ const fetchSuggestions = async (input: string): Promise<Suggestion[]> => {
 		.filter((item) => item.text.length > 0);
 };
 
+/**
+ * Autocomplete does not return coordinates, so committing a place costs a second call.
+ * It only fires on selection, not per keystroke.
+ */
+const fetchCoordinates = async (
+	placeId: string,
+): Promise<{ latitude: number; longitude: number }> => {
+	const response = await fetch(`${PLACE_DETAILS_URL}/${placeId}`, {
+		headers: {
+			"X-Goog-Api-Key": API_KEY ?? "",
+			"X-Goog-FieldMask": "location",
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Place details request failed (${response.status})`);
+	}
+
+	const data = (await response.json()) as PlaceDetailsResponse;
+	const { latitude, longitude } = data.location ?? {};
+
+	if (typeof latitude !== "number" || typeof longitude !== "number") {
+		throw new Error("That place has no coordinates");
+	}
+
+	return { latitude, longitude };
+};
+
 interface PlaceInputProps {
-	value: string;
-	onChange: (value: string) => void;
+	value: SelectedPlace | null;
+	onChange: (place: SelectedPlace | null) => void;
 	placeholder: string;
 }
 
 /**
- * Google Places autocomplete for Indian cities.
+ * Google Places autocomplete for Indian cities, resolving the picked place to
+ * coordinates so journeys can be matched by distance rather than by spelling.
+ *
+ * Internal query text is not synced back from `value`: the parent clears `value` on every
+ * keystroke, so mirroring it would wipe what the user is typing. Parents that need to
+ * reset the field remount it with a changed `key`.
  */
 export const PlaceInput: React.FC<PlaceInputProps> = ({ value, onChange, placeholder }) => {
-	const [query, setQuery] = useState(value);
+	const [query, setQuery] = useState(value?.text ?? "");
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [resolving, setResolving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Set when the user picks a suggestion, so we don't immediately re-search that text.
 	const justSelected = useRef(false);
@@ -72,6 +119,11 @@ export const PlaceInput: React.FC<PlaceInputProps> = ({ value, onChange, placeho
 	useEffect(() => {
 		if (justSelected.current) {
 			justSelected.current = false;
+			return;
+		}
+
+		if (value?.text === query) {
+			setSuggestions([]);
 			return;
 		}
 
@@ -108,13 +160,28 @@ export const PlaceInput: React.FC<PlaceInputProps> = ({ value, onChange, placeho
 			cancelled = true;
 			clearTimeout(timer);
 		};
-	}, [query]);
+	}, [query, value?.text]);
 
 	const handleSelect = (suggestion: Suggestion) => {
 		justSelected.current = true;
 		setQuery(suggestion.text);
 		setSuggestions([]);
-		onChange(suggestion.text);
+		setResolving(true);
+		setError(null);
+
+		fetchCoordinates(suggestion.placeId)
+			.then(({ latitude, longitude }) => {
+				onChange({ ...suggestion, latitude, longitude });
+			})
+			.catch((cause: unknown) => {
+				// Without coordinates the place is unusable, so leave the field uncommitted
+				// rather than letting a half-resolved place through.
+				onChange(null);
+				setError(cause instanceof Error ? cause.message : "Could not locate that place");
+			})
+			.finally(() => {
+				setResolving(false);
+			});
 	};
 
 	return (
@@ -129,11 +196,11 @@ export const PlaceInput: React.FC<PlaceInputProps> = ({ value, onChange, placeho
 						setQuery(text);
 						// Clear the committed value until a suggestion is chosen, so a
 						// half-typed place can't be submitted.
-						onChange("");
+						onChange(null);
 					}}
 					autoCorrect={false}
 				/>
-				{loading ? <ActivityIndicator size="small" color={theme.textMuted} /> : null}
+				{loading || resolving ? <ActivityIndicator size="small" color={theme.textMuted} /> : null}
 			</View>
 
 			{error ? <Text style={styles.error}>{error}</Text> : null}

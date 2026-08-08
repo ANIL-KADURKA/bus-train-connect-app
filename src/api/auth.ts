@@ -1,4 +1,8 @@
-import { type ApplicationVerifier, type ConfirmationResult, signInWithPhoneNumber } from "@firebase/auth";
+import {
+	type ApplicationVerifier,
+	type ConfirmationResult,
+	signInWithPhoneNumber,
+} from "@firebase/auth";
 import type { AuthUserDto } from "../dto/user.dto";
 import { firebaseAuth } from "../lib/firebase";
 import { api } from "./axios";
