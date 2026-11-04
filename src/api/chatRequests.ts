@@ -19,6 +19,9 @@ export interface ChatRequest {
 	respondedAt?: string;
 	/** Set once accepted: the private chat the two now share. */
 	chatId?: string;
+	/** Set with chatId: whether each side has since declined that chat. */
+	declinedByMe?: boolean;
+	declinedByThem?: boolean;
 }
 
 /** Pending and accepted requests on either side of you, newest first. */

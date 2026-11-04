@@ -3,8 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { api } from "../api/axios";
+import type { DirectMessage } from "../api/directChats";
 import type { GroupMessage } from "../api/groupMessages";
 import { chatRequestKeys } from "../hooks/useChatRequests";
+import { directChatKeys, mergeDirectMessage } from "../hooks/useDirectChat";
 import { useAllJourneys } from "../hooks/useJourneys";
 import { firebaseAuth } from "../lib/firebase";
 import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
@@ -68,6 +70,15 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 				console.log("[group-chat] app socket connected", { socketId: nextSocket?.id });
 				setIsConnected(true);
 				// Events sent while we were offline are gone, so resync on every (re)connect.
+				queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
+				queryClient.invalidateQueries({ queryKey: directChatKeys.all });
+			});
+			nextSocket.on("dm:message", (message: DirectMessage) => {
+				mergeDirectMessage(queryClient, message);
+			});
+			// Either person declined or reopened: the chat's canMessage and the list labels change.
+			nextSocket.on("dm:chat-updated", ({ chatId }: { chatId: string }) => {
+				queryClient.invalidateQueries({ queryKey: directChatKeys.chat(chatId) });
 				queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
 			});
 			// The server pushes these to the other side of a request (received/withdrawn to the

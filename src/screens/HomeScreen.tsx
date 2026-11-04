@@ -132,8 +132,13 @@ export const HomeScreen: React.FC = () => {
 			return;
 		}
 
-		// Accepted: the private chat row already exists (request.chatId); its screen comes next.
-		Alert.alert("Chat coming soon", `You and ${passenger.displayName} can chat once DMs land.`);
+		// Accepted. Opens even if one of you has since declined: the chat screen explains that
+		// and is where it can be undone.
+		if (request?.chatId) {
+			// The Passengers sheet is a Modal and would stay on top of the pushed screen.
+			setPassengersView(null);
+			navigation.navigate("DirectChat", { chatId: request.chatId, otherUser: request.otherUser });
+		}
 	};
 
 	const openJourneyChat = (journey: JourneyListItem) => {

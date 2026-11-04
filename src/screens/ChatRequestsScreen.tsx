@@ -24,6 +24,7 @@ import {
 	useRespondToChatRequest,
 	useWithdrawChatRequest,
 } from "../hooks/useChatRequests";
+import { useAcceptDirectChat, useDeclineDirectChat } from "../hooks/useDirectChat";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { confirm } from "../store/confirmStore";
 import { getApiErrorMessage } from "../utils/errorhandler.utils";
@@ -43,7 +44,11 @@ const describe = (kind: SectionKind, request: ChatRequest): string => {
 		case "sent":
 			return "Waiting for a reply";
 		case "accepted":
-			return request.direction === "incoming" ? "You accepted" : "Accepted your request";
+			if (request.declinedByMe) return "You declined this chat";
+			if (request.declinedByThem) return "Declined this chat";
+			return request.direction === "incoming"
+				? "You accepted · tap to chat"
+				: "Accepted · tap to chat";
 		case "rejected":
 			return "You declined";
 	}
@@ -54,6 +59,8 @@ export const ChatRequestsScreen: FC = () => {
 	const { data: requests = [], isLoading, isRefetching, refetch } = useChatRequests();
 	const respond = useRespondToChatRequest();
 	const withdraw = useWithdrawChatRequest();
+	const declineChat = useDeclineDirectChat();
+	const acceptChat = useAcceptDirectChat();
 
 	const sections = useMemo<Section[]>(() => {
 		const where = (status: ChatRequest["status"], direction?: ChatRequest["direction"]) =>
@@ -74,11 +81,23 @@ export const ChatRequestsScreen: FC = () => {
 		).filter((section) => section.data.length > 0);
 	}, [requests]);
 
-	const busyId = respond.isPending
-		? respond.variables?.requestId
-		: withdraw.isPending
-			? withdraw.variables
-			: undefined;
+	// Request mutations are keyed by requestId, chat ones by chatId; a row is busy if either matches.
+	const busyIds = new Set(
+		[
+			respond.isPending && respond.variables?.requestId,
+			withdraw.isPending && withdraw.variables,
+			declineChat.isPending && declineChat.variables,
+			acceptChat.isPending && acceptChat.variables,
+		].filter((id): id is string => typeof id === "string"),
+	);
+	const isBusy = (request: ChatRequest) =>
+		busyIds.has(request.requestId) || (request.chatId ? busyIds.has(request.chatId) : false);
+
+	const openChat = (request: ChatRequest) => {
+		if (request.chatId) {
+			navigation.navigate("DirectChat", { chatId: request.chatId, otherUser: request.otherUser });
+		}
+	};
 
 	const handleRespond = (request: ChatRequest, action: "accept" | "reject") => {
 		respond.mutate(
@@ -101,16 +120,30 @@ export const ChatRequestsScreen: FC = () => {
 		});
 	};
 
-	// Undoing an accept closes a chat the other person can already see, so it asks first.
-	// Accepting a declined request needs no confirmation — it only opens a door.
-	const handleRevokeAccept = (request: ChatRequest) => {
+	// Declining pauses a chat the other person can already use, so it asks first. Accepting
+	// again needs no confirmation — it only reopens your side.
+	const handleDeclineChat = (request: ChatRequest) => {
+		const { chatId } = request;
+		if (!chatId) return;
+
 		confirm({
-			title: "Reject this chat?",
-			message: `${request.otherUser.displayName} will no longer be able to open a chat with you. You can accept again later.`,
+			title: "Decline this chat?",
+			message: `Neither of you will be able to send messages until you accept again. ${request.otherUser.displayName} will see that you declined.`,
 			cancelLabel: "Keep chat",
-			confirmLabel: "Reject",
+			confirmLabel: "Decline",
 			tone: "destructive",
-			onConfirm: () => handleRespond(request, "reject"),
+			onConfirm: () =>
+				declineChat.mutate(chatId, {
+					onError: (cause) => Alert.alert("Could not decline", getApiErrorMessage(cause)),
+				}),
+		});
+	};
+
+	const handleAcceptChat = (request: ChatRequest) => {
+		if (!request.chatId) return;
+
+		acceptChat.mutate(request.chatId, {
+			onError: (cause) => Alert.alert("Could not accept", getApiErrorMessage(cause)),
 		});
 	};
 
@@ -151,17 +184,26 @@ export const ChatRequestsScreen: FC = () => {
 					</Pressable>
 				);
 			case "accepted":
-				// Only the person who accepted can change their mind; the sender has nothing to undo.
-				return request.direction === "incoming" ? (
+				// Either person can decline at any time, and only undo their own decline.
+				return request.declinedByMe ? (
+					<Pressable
+						style={[styles.button, styles.acceptButton]}
+						onPress={() => handleAcceptChat(request)}
+						accessibilityRole="button"
+						accessibilityLabel={`Accept chat with ${name} again`}
+					>
+						<Text style={styles.acceptText}>Accept</Text>
+					</Pressable>
+				) : (
 					<Pressable
 						style={[styles.button, styles.rejectButton]}
-						onPress={() => handleRevokeAccept(request)}
+						onPress={() => handleDeclineChat(request)}
 						accessibilityRole="button"
-						accessibilityLabel={`Reject chat with ${name}`}
+						accessibilityLabel={`Decline chat with ${name}`}
 					>
-						<Text style={styles.rejectText}>Reject</Text>
+						<Text style={styles.rejectText}>Decline</Text>
 					</Pressable>
-				) : null;
+				);
 			case "rejected":
 				return (
 					<Pressable
@@ -220,12 +262,19 @@ export const ChatRequestsScreen: FC = () => {
 						</Text>
 					)}
 					renderItem={({ item, section }) => {
-						const busy = busyId === item.requestId;
+						const busy = isBusy(item);
 						const person = item.otherUser;
 						const subtitle = genderLabel(person.gender);
+						const opensChat = section.kind === "accepted" && Boolean(item.chatId);
 
 						return (
-							<View style={styles.row}>
+							<Pressable
+								style={({ pressed }) => [styles.row, opensChat && pressed && styles.rowPressed]}
+								onPress={opensChat ? () => openChat(item) : undefined}
+								disabled={!opensChat}
+								accessibilityRole={opensChat ? "button" : undefined}
+								accessibilityLabel={opensChat ? `Open chat with ${person.displayName}` : undefined}
+							>
 								{person.profilePhotoUrl ? (
 									<Image
 										source={{ uri: person.profilePhotoUrl }}
@@ -251,7 +300,7 @@ export const ChatRequestsScreen: FC = () => {
 								) : (
 									renderAction(section.kind, item)
 								)}
-							</View>
+							</Pressable>
 						);
 					}}
 					ListEmptyComponent={
@@ -322,6 +371,9 @@ const styles = StyleSheet.create({
 		backgroundColor: theme.card,
 		borderWidth: 1,
 		borderColor: theme.border,
+	},
+	rowPressed: {
+		backgroundColor: theme.surface,
 	},
 	photo: {
 		width: AVATAR_SIZE,

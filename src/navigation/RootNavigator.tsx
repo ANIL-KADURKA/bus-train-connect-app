@@ -2,11 +2,13 @@ import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import type { ChatRequestUser } from "../api/chatRequests";
 import type { JourneyListItem } from "../api/journeys";
 import { brand, theme } from "../constants/theme";
 import { useCurrentUser, useFirebaseAuth } from "../hooks/useUser";
 import { GroupChatSocketProvider } from "../providers/GroupChatSocketProvider";
 import { ChatRequestsScreen } from "../screens/ChatRequestsScreen";
+import { DirectChatScreen } from "../screens/Chats/DirectChatScreen";
 import { JourneyGroupChatScreen } from "../screens/Chats/JourneyGroupChatScreen";
 import { OtpScreen } from "../screens/OtpScreen";
 import { PhoneScreen } from "../screens/PhoneScreen";
@@ -22,6 +24,11 @@ export type RootStackParamList = {
 		journey: JourneyListItem;
 	};
 	ChatRequests: undefined;
+	DirectChat: {
+		chatId: string;
+		/** Lets the header render instantly; the screen still loads the chat itself. */
+		otherUser?: ChatRequestUser;
+	};
 	Profile: undefined;
 };
 
@@ -69,6 +76,7 @@ export const RootNavigator = () => {
 						<Stack.Screen name="Main" component={MainTabNavigator} />
 						<Stack.Screen name="JourneyGroupChat" component={JourneyGroupChatScreen} />
 						<Stack.Screen name="ChatRequests" component={ChatRequestsScreen} />
+						<Stack.Screen name="DirectChat" component={DirectChatScreen} />
 					</Stack.Navigator>
 				</GroupChatSocketProvider>
 			) : (

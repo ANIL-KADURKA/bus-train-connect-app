@@ -6,10 +6,12 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import React, { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import type { ChatRequest } from "../../api/chatRequests";
 import { Badge } from "../../components/shared/Badge";
 import { ConversationRow } from "../../components/shared/ConversationRow";
 import { SegmentedControl, type SegmentOption } from "../../components/shared/SegmentedControl";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
+import { useChatRequests } from "../../hooks/useChatRequests";
 import { useAllJourneys } from "../../hooks/useJourneys";
 import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
@@ -22,15 +24,6 @@ const TABS: SegmentOption<ChatsTab>[] = [
 	{ value: "journeys", label: "Journeys" },
 	{ value: "dms", label: "DMs" },
 ];
-
-export interface DirectChat {
-	id: string;
-	displayName: string;
-	avatarUrl?: string;
-	lastMessage?: string;
-	unreadCount: number;
-	timestamp?: string;
-}
 
 type ChatsNavigation = CompositeNavigationProp<
 	BottomTabNavigationProp<MainTabParamList, "Chats">,
@@ -57,9 +50,15 @@ export const ChatsScreen: React.FC = () => {
 	const unreadByJourney = useGroupChatStore((state) => state.unreadByJourney);
 	const { data: journeys, isLoading: journeysLoading } = useAllJourneys();
 
+	const { data: requests = [] } = useChatRequests();
+
 	const journeyChats = (journeys ?? []).filter((journey) => journey.isMember);
-	// Populated once the backend exposes private chats.
-	const directChats: DirectChat[] = [];
+	// Every accepted request is a private chat, including ones since declined — those stay
+	// listed (history is still readable) and say so in their subtitle.
+	const directChats = requests.filter(
+		(request): request is ChatRequest & { chatId: string } =>
+			request.status === "accepted" && Boolean(request.chatId),
+	);
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top"]}>
@@ -100,14 +99,24 @@ export const ChatsScreen: React.FC = () => {
 			) : (
 				<FlatList
 					data={directChats}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item) => item.chatId}
 					renderItem={({ item }) => (
 						<ConversationRow
-							title={item.displayName}
-							subtitle={item.lastMessage}
-							timestamp={item.timestamp}
-							unreadCount={item.unreadCount}
-							avatarUrl={item.avatarUrl}
+							title={item.otherUser.displayName}
+							subtitle={
+								item.declinedByMe
+									? "You declined this chat"
+									: item.declinedByThem
+										? "Messaging paused"
+										: "Tap to chat"
+							}
+							avatarUrl={item.otherUser.profilePhotoUrl}
+							onPress={() =>
+								navigation.navigate("DirectChat", {
+									chatId: item.chatId,
+									otherUser: item.otherUser,
+								})
+							}
 						/>
 					)}
 					// Pending requests sit above the accepted conversations, per the spec.
