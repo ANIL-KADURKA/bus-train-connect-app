@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { io, type Socket } from "socket.io-client";
 import { api } from "../api/axios";
 import type { GroupMessage } from "../api/groupMessages";
+import { chatRequestKeys } from "../hooks/useChatRequests";
 import { useAllJourneys } from "../hooks/useJourneys";
 import { firebaseAuth } from "../lib/firebase";
 import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
@@ -66,7 +67,22 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 			nextSocket.on("connect", () => {
 				console.log("[group-chat] app socket connected", { socketId: nextSocket?.id });
 				setIsConnected(true);
+				// Events sent while we were offline are gone, so resync on every (re)connect.
+				queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
 			});
+			// The server pushes these to the other side of a request (received/withdrawn to the
+			// recipient, accepted/rejected to the requester). Refetching is enough: the list
+			// endpoint is what every card label and the Chat requests screen derive from.
+			for (const event of [
+				"chat-request:received",
+				"chat-request:withdrawn",
+				"chat-request:accepted",
+				"chat-request:rejected",
+			]) {
+				nextSocket.on(event, () => {
+					queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
+				});
+			}
 			nextSocket.on("disconnect", (reason) => {
 				console.log("[group-chat] app socket disconnected", { reason });
 				setIsConnected(false);

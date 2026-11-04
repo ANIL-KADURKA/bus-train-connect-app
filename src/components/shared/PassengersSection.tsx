@@ -9,8 +9,8 @@ interface Props {
 	members: Passenger[];
 	isLoading: boolean;
 	statusFor: (userId: string) => ChatStatus;
-	onRequestChat: (member: Passenger) => void;
-	onOpenChat: (member: Passenger) => void;
+	isBusy?: (userId: string) => boolean;
+	onAction: (member: Passenger) => void;
 	onViewAll: () => void;
 }
 
@@ -25,8 +25,8 @@ export const PassengersSection: FC<Props> = ({
 	members,
 	isLoading,
 	statusFor,
-	onRequestChat,
-	onOpenChat,
+	isBusy,
+	onAction,
 	onViewAll,
 }) => {
 	const preview = members.slice(0, PREVIEW_COUNT);
@@ -65,8 +65,8 @@ export const PassengersSection: FC<Props> = ({
 						<PassengerCard
 							member={item}
 							status={statusFor(item.userId)}
-							onRequestChat={() => onRequestChat(item)}
-							onOpenChat={() => onOpenChat(item)}
+							busy={isBusy?.(item.userId)}
+							onPress={() => onAction(item)}
 						/>
 					)}
 				/>

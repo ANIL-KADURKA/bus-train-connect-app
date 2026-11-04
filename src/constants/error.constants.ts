@@ -66,7 +66,8 @@ export const ERROR_MESSAGES = {
 	[ERROR_CODES.AUTH_INTERNAL_ERROR]: "Temporary Firebase issue. Please try again.",
 	[ERROR_CODES.AUTH_APP_NOT_AUTHORIZED]: "App isn't authorized. Please check Firebase config.",
 	[ERROR_CODES.AUTH_OPERATION_NOT_ALLOWED]: "Phone authentication is disabled in Firebase.",
-	[ERROR_CODES.AUTH_BILLING_NOT_ENABLED]: "SMS sign-in is unavailable right now. Please try again later.",
+	[ERROR_CODES.AUTH_BILLING_NOT_ENABLED]:
+		"SMS sign-in is unavailable right now. Please try again later.",
 	[ERROR_CODES.AUTH_MISSING_APP_CREDENTIAL]: "Missing app credential. Please try again.",
 	[ERROR_CODES.AUTH_CODE_EXPIRED]: "OTP expired. Request a new code.",
 	[ERROR_CODES.AUTH_INVALID_VERIFICATION_CODE]: "Incorrect OTP. Please try again.",

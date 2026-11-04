@@ -11,7 +11,7 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from "r
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
 import { FAB_INSET, FAB_SIZE } from "./Fab";
 
-export type QuickAction = "createJourney" | "parcelRequest" | "findCoPassengers" | "sellTicket";
+export type QuickAction = "createJourney" | "parcelRequest" | "findPassengers" | "sellTicket";
 
 interface ActionItem {
 	key: QuickAction;
@@ -22,7 +22,7 @@ interface ActionItem {
 const ACTIONS: ActionItem[] = [
 	{ key: "createJourney", label: "Create Journey", icon: Route01Icon },
 	{ key: "parcelRequest", label: "Parcel Request", icon: PackageAddIcon },
-	{ key: "findCoPassengers", label: "Find Co-passengers", icon: UserGroupIcon },
+	{ key: "findPassengers", label: "Find Passengers", icon: UserGroupIcon },
 	{ key: "sellTicket", label: "Sell Ticket", icon: Ticket01Icon },
 ];
 

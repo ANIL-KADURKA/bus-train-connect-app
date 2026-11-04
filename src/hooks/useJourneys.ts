@@ -72,13 +72,13 @@ export const useJourneys = (
 };
 
 /** GET /journeys — upcoming journeys across both transport modes. */
-export const useAllJourneys = (): UseQueryResult<JourneyListItem[]> => {
+export const useAllJourneys = (enabled = true): UseQueryResult<JourneyListItem[]> => {
 	const { uid, ready } = useFirebaseAuth();
 
 	return useQuery({
 		queryKey: journeyKeys.allList(),
 		queryFn: () => listJourneys(),
-		enabled: ready && uid !== null,
+		enabled: enabled && ready && uid !== null,
 	});
 };
 
@@ -119,13 +119,16 @@ export const useJourneyMembers = (
 };
 
 /** GET /journeys/passengers — distinct travellers across the journeys on screen. */
-export const usePassengers = (journeyIds: string[]): UseQueryResult<Passenger[]> => {
+export const usePassengers = (
+	journeyIds: string[],
+	enabled = true,
+): UseQueryResult<Passenger[]> => {
 	const { uid, ready } = useFirebaseAuth();
 
 	return useQuery({
 		queryKey: journeyKeys.passengers(journeyIds),
 		queryFn: () => listPassengers(journeyIds),
-		enabled: ready && uid !== null && journeyIds.length > 0,
+		enabled: enabled && ready && uid !== null && journeyIds.length > 0,
 	});
 };
 

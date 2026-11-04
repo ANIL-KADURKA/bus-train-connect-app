@@ -1,5 +1,14 @@
+import Constants from "expo-constants";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+	ActivityIndicator,
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 import { radius, spacing, theme, typography } from "../../constants/theme";
 
 const AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
@@ -9,6 +18,30 @@ const MIN_QUERY_LENGTH = 3;
 
 /** Expo inlines EXPO_PUBLIC_* at build time. */
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+
+/**
+ * The key is restricted to this app's iOS bundle id and Android package. Google's native
+ * SDKs send these automatically; a plain fetch does not, so without them every call is a 403.
+ * Read from app.json so Expo Go (whose own bundle id the key rejects) identifies as this app.
+ */
+const appIdentityHeaders = (): Record<string, string> => {
+	const config = Constants.expoConfig;
+
+	if (Platform.OS === "ios" && config?.ios?.bundleIdentifier) {
+		return { "X-Ios-Bundle-Identifier": config.ios.bundleIdentifier };
+	}
+
+	if (Platform.OS === "android" && config?.android?.package) {
+		return { "X-Android-Package": config.android.package };
+	}
+
+	return {};
+};
+
+const placesHeaders = (): Record<string, string> => ({
+	"X-Goog-Api-Key": API_KEY ?? "",
+	...appIdentityHeaders(),
+});
 
 /** A place the user has committed to, with the coordinates radius search needs. */
 export interface SelectedPlace {
@@ -41,7 +74,7 @@ const fetchSuggestions = async (input: string): Promise<Suggestion[]> => {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"X-Goog-Api-Key": API_KEY ?? "",
+			...placesHeaders(),
 		},
 		// Restrict suggestions to Indian cities.
 		body: JSON.stringify({
@@ -74,7 +107,7 @@ const fetchCoordinates = async (
 ): Promise<{ latitude: number; longitude: number }> => {
 	const response = await fetch(`${PLACE_DETAILS_URL}/${placeId}`, {
 		headers: {
-			"X-Goog-Api-Key": API_KEY ?? "",
+			...placesHeaders(),
 			"X-Goog-FieldMask": "location",
 		},
 	});

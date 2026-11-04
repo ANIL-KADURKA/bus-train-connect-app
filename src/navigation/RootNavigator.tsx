@@ -6,6 +6,7 @@ import type { JourneyListItem } from "../api/journeys";
 import { brand, theme } from "../constants/theme";
 import { useCurrentUser, useFirebaseAuth } from "../hooks/useUser";
 import { GroupChatSocketProvider } from "../providers/GroupChatSocketProvider";
+import { ChatRequestsScreen } from "../screens/ChatRequestsScreen";
 import { JourneyGroupChatScreen } from "../screens/Chats/JourneyGroupChatScreen";
 import { OtpScreen } from "../screens/OtpScreen";
 import { PhoneScreen } from "../screens/PhoneScreen";
@@ -20,6 +21,7 @@ export type RootStackParamList = {
 	JourneyGroupChat: {
 		journey: JourneyListItem;
 	};
+	ChatRequests: undefined;
 	Profile: undefined;
 };
 
@@ -66,6 +68,7 @@ export const RootNavigator = () => {
 					<Stack.Navigator screenOptions={stackOptions}>
 						<Stack.Screen name="Main" component={MainTabNavigator} />
 						<Stack.Screen name="JourneyGroupChat" component={JourneyGroupChatScreen} />
+						<Stack.Screen name="ChatRequests" component={ChatRequestsScreen} />
 					</Stack.Navigator>
 				</GroupChatSocketProvider>
 			) : (

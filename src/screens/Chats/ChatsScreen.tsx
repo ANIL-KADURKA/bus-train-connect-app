@@ -113,7 +113,11 @@ export const ChatsScreen: React.FC = () => {
 					// Pending requests sit above the accepted conversations, per the spec.
 					ListHeaderComponent={
 						pendingChatRequests > 0 ? (
-							<Pressable style={styles.requestsRow} accessibilityRole="button">
+							<Pressable
+								style={styles.requestsRow}
+								onPress={() => navigation.navigate("ChatRequests")}
+								accessibilityRole="button"
+							>
 								<View style={styles.requestsIcon}>
 									<HugeiconsIcon
 										icon={SentIcon}

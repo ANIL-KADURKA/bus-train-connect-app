@@ -10,11 +10,16 @@ const MODE_OPTIONS: SegmentOption<TransportMode>[] = [
 	{ value: "train", label: "Trains", icon: Train01Icon },
 ];
 
+interface ModeSwitcherProps {
+	/** Rendered at the right end of the same row, e.g. Home's chat requests button. */
+	trailing?: React.ReactNode;
+}
+
 /**
  * Global transport context switch. This is not a filter chip — changing it re-scopes
  * every journey list and search below it, and the choice survives app restarts.
  */
-export const ModeSwitcher: React.FC = () => {
+export const ModeSwitcher: React.FC<ModeSwitcherProps> = ({ trailing }) => {
 	const mode = useModeStore((state) => state.mode);
 	const setMode = useModeStore((state) => state.setMode);
 
@@ -26,12 +31,16 @@ export const ModeSwitcher: React.FC = () => {
 				onChange={setMode}
 				style={styles.control}
 			/>
+			{trailing}
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
 	container: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
 		paddingHorizontal: spacing.xl,
 		paddingTop: spacing.sm,
 		paddingBottom: spacing.md,

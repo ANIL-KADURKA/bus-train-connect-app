@@ -1,4 +1,4 @@
-import { Bus01Icon, Train01Icon } from "@hugeicons/core-free-icons";
+import { BubbleChatAddIcon, Bus01Icon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native";
@@ -16,20 +16,28 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { JourneyListItem, JourneySearch } from "../api/journeys";
+import type { JourneyListItem, JourneySearch, Passenger } from "../api/journeys";
 import { Fab } from "../components/Fab";
 import { JourneyCard } from "../components/JourneyCard";
 import { ModeSwitcher } from "../components/ModeSwitcher";
 import { type QuickAction, QuickActionsMenu } from "../components/QuickActionsMenu";
+import { Badge } from "../components/shared/Badge";
 import { JourneySearchForm } from "../components/shared/JourneySearchForm";
-import type { ChatStatus } from "../components/shared/PassengerCard";
 import { PassengersModal } from "../components/shared/PassengersModal";
 import { PassengersSection } from "../components/shared/PassengersSection";
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
-import { useJoinJourney, useJourneys, usePassengers } from "../hooks/useJourneys";
+import {
+	useChatStatuses,
+	useSendChatRequest,
+	useWithdrawChatRequest,
+} from "../hooks/useChatRequests";
+import { useAllJourneys, useJoinJourney, useJourneys, usePassengers } from "../hooks/useJourneys";
 import type { MainTabParamList } from "../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../navigation/RootNavigator";
+import { useBadgeStore } from "../store/badgeStore";
+import { confirm } from "../store/confirmStore";
 import { useModeStore } from "../store/modeStore";
+import { getApiErrorMessage } from "../utils/errorhandler.utils";
 import { CreateJourneyModal } from "./Journeys/CreateJourneyModal";
 
 type HomeNavigation = CompositeNavigationProp<
@@ -45,10 +53,12 @@ export const HomeScreen: React.FC = () => {
 	const [createJourneyOpen, setCreateJourneyOpen] = useState(false);
 	const [search, setSearch] = useState<JourneySearch | null>(null);
 	const [journeyToJoin, setJourneyToJoin] = useState<JourneyListItem | null>(null);
-	const [passengersOpen, setPassengersOpen] = useState(false);
-	// Local-only for now: tapping Request flips a traveller straight to accepted so both
-	// button states are reachable while the chat_requests endpoints are still to come.
-	const [chatStatuses, setChatStatuses] = useState<Record<string, ChatStatus>>({});
+	// "browse" is View all from the carousel; "find" is the + menu, which adds the My journeys filter.
+	const [passengersView, setPassengersView] = useState<"browse" | "find" | null>(null);
+	const { statusFor, requestFor } = useChatStatuses();
+	const sendRequest = useSendChatRequest();
+	const withdrawRequest = useWithdrawChatRequest();
+	const pendingChatRequests = useBadgeStore((state) => state.pendingChatRequests);
 
 	const {
 		data: journeys,
@@ -65,13 +75,66 @@ export const HomeScreen: React.FC = () => {
 	const journeyIds = useMemo(() => results.map((item) => item.journeyId), [results]);
 	const { data: passengers = [], isLoading: passengersLoading } = usePassengers(journeyIds);
 
-	const statusFor = (userId: string): ChatStatus => chatStatuses[userId] ?? "none";
+	// Across both modes, not just the active one: "my journeys" means every trip you've joined.
+	// Only fetched once Find Passengers is opened, so plain browsing costs nothing extra.
+	const findingPassengers = passengersView === "find";
+	const { data: allJourneys, isLoading: allJourneysLoading } = useAllJourneys(findingPassengers);
+	const myJourneyIds = useMemo(
+		() => (allJourneys ?? []).filter((item) => item.isMember).map((item) => item.journeyId),
+		[allJourneys],
+	);
+	const { data: myJourneyPassengers = [], isLoading: myJourneyPassengersLoading } = usePassengers(
+		myJourneyIds,
+		findingPassengers,
+	);
 
-	const toggleChatStatus = (userId: string) =>
-		setChatStatuses((current) => ({
-			...current,
-			[userId]: current[userId] === "accepted" ? "none" : "accepted",
-		}));
+	const openChatRequests = () => {
+		// The Passengers sheet is a Modal and would stay on top of the pushed screen.
+		setPassengersView(null);
+		navigation.navigate("ChatRequests");
+	};
+
+	// The mutations stay pending until the refetch they trigger lands (useChatRequests
+	// returns that promise), so the spinner hands straight over to the new label.
+	const isBusy = (userId: string): boolean =>
+		(sendRequest.isPending && sendRequest.variables === userId) ||
+		(withdrawRequest.isPending && withdrawRequest.variables === requestFor(userId)?.requestId);
+
+	/** One card button, four meanings — see ChatStatus. */
+	const handlePassengerAction = (passenger: Passenger) => {
+		const status = statusFor(passenger.userId);
+		const request = requestFor(passenger.userId);
+
+		if (status === "none") {
+			sendRequest.mutate(passenger.userId, {
+				onError: (cause) => Alert.alert("Could not send request", getApiErrorMessage(cause)),
+			});
+			return;
+		}
+
+		if (status === "pending" && request) {
+			confirm({
+				title: "Chat request pending",
+				message: `${passenger.displayName} hasn't replied yet. Withdraw your request?`,
+				cancelLabel: "Leave as is",
+				confirmLabel: "Withdraw",
+				tone: "destructive",
+				onConfirm: () =>
+					withdrawRequest.mutate(request.requestId, {
+						onError: (cause) => Alert.alert("Could not withdraw", getApiErrorMessage(cause)),
+					}),
+			});
+			return;
+		}
+
+		if (status === "incoming") {
+			openChatRequests();
+			return;
+		}
+
+		// Accepted: the private chat row already exists (request.chatId); its screen comes next.
+		Alert.alert("Chat coming soon", `You and ${passenger.displayName} can chat once DMs land.`);
+	};
 
 	const openJourneyChat = (journey: JourneyListItem) => {
 		navigation.navigate("JourneyGroupChat", { journey });
@@ -117,14 +180,40 @@ export const HomeScreen: React.FC = () => {
 			return;
 		}
 
-		// Parcels, co-passenger search and ticket resale land with their own features.
+		if (action === "findPassengers") {
+			setPassengersView("find");
+			return;
+		}
+
+		// Parcels and ticket resale land with their own features.
 		Alert.alert("Coming soon", "This isn't built yet.");
 	};
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top"]}>
 			{/* Fixed above the list — always visible, never behind a menu. */}
-			<ModeSwitcher />
+			<ModeSwitcher
+				trailing={
+					<Pressable
+						style={styles.requestsButton}
+						onPress={openChatRequests}
+						accessibilityRole="button"
+						accessibilityLabel={
+							pendingChatRequests > 0
+								? `Chat requests, ${pendingChatRequests} new`
+								: "Chat requests"
+						}
+					>
+						<HugeiconsIcon
+							icon={BubbleChatAddIcon}
+							size={22}
+							strokeWidth={1.8}
+							color={brand.tealDeep}
+						/>
+						<Badge count={pendingChatRequests} style={styles.requestsBadge} />
+					</Pressable>
+				}
+			/>
 
 			{isLoading ? (
 				<View style={styles.centered}>
@@ -161,9 +250,9 @@ export const HomeScreen: React.FC = () => {
 									members={passengers}
 									isLoading={passengersLoading}
 									statusFor={statusFor}
-									onRequestChat={(passenger) => toggleChatStatus(passenger.userId)}
-									onOpenChat={(passenger) => toggleChatStatus(passenger.userId)}
-									onViewAll={() => setPassengersOpen(true)}
+									isBusy={isBusy}
+									onAction={handlePassengerAction}
+									onViewAll={() => setPassengersView("browse")}
 								/>
 							</View>
 
@@ -290,13 +379,24 @@ export const HomeScreen: React.FC = () => {
 			</Modal>
 
 			<PassengersModal
-				visible={passengersOpen}
+				visible={passengersView !== null}
 				members={passengers}
 				isLoading={passengersLoading}
+				myJourneys={
+					findingPassengers
+						? {
+								members: myJourneyPassengers,
+								// No joined journeys means usePassengers never runs, so only the journey
+								// lookup itself counts as loading.
+								isLoading:
+									allJourneysLoading || (myJourneyIds.length > 0 && myJourneyPassengersLoading),
+							}
+						: undefined
+				}
 				statusFor={statusFor}
-				onRequestChat={(passenger) => toggleChatStatus(passenger.userId)}
-				onOpenChat={(passenger) => toggleChatStatus(passenger.userId)}
-				onClose={() => setPassengersOpen(false)}
+				isBusy={isBusy}
+				onAction={handlePassengerAction}
+				onClose={() => setPassengersView(null)}
 			/>
 
 			<CreateJourneyModal visible={createJourneyOpen} onClose={() => setCreateJourneyOpen(false)} />
@@ -308,6 +408,21 @@ const styles = StyleSheet.create({
 	root: {
 		flex: 1,
 		backgroundColor: theme.background,
+	},
+	requestsButton: {
+		width: 44,
+		height: 44,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: radius.full,
+		backgroundColor: brand.tealMuted,
+		borderWidth: 1,
+		borderColor: brand.tealBorder,
+	},
+	requestsBadge: {
+		position: "absolute",
+		top: -4,
+		right: -4,
 	},
 	centered: {
 		flex: 1,

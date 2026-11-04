@@ -1,40 +1,74 @@
-import { BubbleChatIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
+import {
+	BubbleChatIcon,
+	Clock01Icon,
+	MailReceive01Icon,
+	UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react-native";
 import type { FC } from "react";
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { Passenger } from "../../api/journeys";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
 import { genderLabel } from "../../utils/gender.utils";
 import { GenderAvatar } from "./GenderAvatar";
 
 /**
- * Where this traveller's chat stands. The backend already models a third state —
- * chat_requests rows go pending before they are accepted or rejected — so this union
- * is the seam that grows when the request flow is wired up; nothing else needs to move.
+ * Where this traveller's chat stands, from the viewer's side:
+ * - pending: you asked and they haven't answered
+ * - incoming: they asked you
+ * - accepted: either of you asked and the other said yes
  */
-export type ChatStatus = "none" | "accepted";
+export type ChatStatus = "none" | "pending" | "incoming" | "accepted";
 
 interface Props {
 	member: Passenger;
 	status: ChatStatus;
-	onRequestChat: () => void;
-	onOpenChat: () => void;
+	/** One action per card; what it does depends on `status`, so the parent decides. */
+	onPress: () => void;
+	/** A request or withdrawal for this traveller is in flight: spinner in place of the icon. */
+	busy?: boolean;
 	/** Wide cards fill a list row; narrow ones sit in the carousel. */
 	variant?: "carousel" | "list";
 }
 
 const AVATAR_SIZE = 64;
 
+const ACTIONS: Record<
+	ChatStatus,
+	{ label: string; icon: IconSvgElement; tone: "request" | "chat" | "muted"; a11y: string }
+> = {
+	none: { label: "Request", icon: UserAdd01Icon, tone: "request", a11y: "Request chat with" },
+	pending: {
+		label: "Pending",
+		icon: Clock01Icon,
+		tone: "muted",
+		a11y: "Chat request pending with",
+	},
+	incoming: {
+		label: "Respond",
+		icon: MailReceive01Icon,
+		tone: "request",
+		a11y: "Respond to chat request from",
+	},
+	accepted: { label: "Open chat", icon: BubbleChatIcon, tone: "chat", a11y: "Open chat with" },
+};
+
 export const PassengerCard: FC<Props> = ({
 	member,
 	status,
-	onRequestChat,
-	onOpenChat,
+	onPress,
+	busy = false,
 	variant = "carousel",
 }) => {
 	const label = genderLabel(member.gender);
-	const accepted = status === "accepted";
+	const action = ACTIONS[status];
+	const tint =
+		action.tone === "chat"
+			? theme.white
+			: action.tone === "muted"
+				? theme.textSecondary
+				: brand.tealDeep;
 
 	return (
 		<View style={[styles.card, variant === "list" && styles.cardList]}>
@@ -65,21 +99,37 @@ export const PassengerCard: FC<Props> = ({
 				</View>
 			) : (
 				<Pressable
-					style={[styles.action, accepted ? styles.actionChat : styles.actionRequest]}
-					onPress={accepted ? onOpenChat : onRequestChat}
+					style={[
+						styles.action,
+						action.tone === "chat"
+							? styles.actionChat
+							: action.tone === "muted"
+								? styles.actionMuted
+								: styles.actionRequest,
+					]}
+					onPress={onPress}
+					// Blocks a second tap from firing a duplicate request while the first is in flight.
+					disabled={busy}
 					accessibilityRole="button"
-					accessibilityLabel={
-						accepted ? `Chat with ${member.displayName}` : `Request chat with ${member.displayName}`
-					}
+					accessibilityLabel={`${action.a11y} ${member.displayName}`}
+					accessibilityState={{ busy, disabled: busy }}
 				>
-					<HugeiconsIcon
-						icon={accepted ? BubbleChatIcon : UserAdd01Icon}
-						size={14}
-						strokeWidth={1.8}
-						color={accepted ? theme.white : brand.tealDeep}
-					/>
-					<Text style={accepted ? styles.actionChatText : styles.actionRequestText}>
-						{accepted ? "Chat" : "Request"}
+					{/* Same footprint as the 14px icon, so the button doesn't change size. */}
+					{busy ? (
+						<ActivityIndicator size="small" color={tint} style={styles.spinner} />
+					) : (
+						<HugeiconsIcon icon={action.icon} size={14} strokeWidth={1.8} color={tint} />
+					)}
+					<Text
+						style={
+							action.tone === "chat"
+								? styles.actionChatText
+								: action.tone === "muted"
+									? styles.actionMutedText
+									: styles.actionRequestText
+						}
+					>
+						{action.label}
 					</Text>
 				</Pressable>
 			)}
@@ -139,6 +189,21 @@ const styles = StyleSheet.create({
 		fontSize: typography.sm,
 		fontWeight: typography.bold,
 		color: brand.tealDeep,
+	},
+	spinner: {
+		width: 14,
+		height: 14,
+		transform: [{ scale: 0.7 }],
+	},
+	actionMuted: {
+		backgroundColor: theme.surface,
+		borderWidth: 1,
+		borderColor: theme.border,
+	},
+	actionMutedText: {
+		fontSize: typography.sm,
+		fontWeight: typography.bold,
+		color: theme.textSecondary,
 	},
 	actionChat: {
 		backgroundColor: brand.teal,

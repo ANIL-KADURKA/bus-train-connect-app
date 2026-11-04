@@ -18,6 +18,8 @@ export const brand = {
 	tealBorder: "rgba(0,201,167,0.25)",
 	amber: "#F4A72A",
 	amberDeep: "#B87A1A",
+	// Destructive actions only (withdraw, reject) — not for errors or warnings.
+	danger: "#D64545",
 } as const;
 
 // Flip this to switch the entire app between dark and light mode for now.
