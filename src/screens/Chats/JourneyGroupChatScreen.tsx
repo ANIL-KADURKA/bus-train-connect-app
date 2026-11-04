@@ -22,8 +22,10 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GenderAvatar } from "../../components/shared/GenderAvatar";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
 import { useGroupChat } from "../../hooks/useGroupChat";
+import { useJourneyMembers } from "../../hooks/useJourneys";
 import { useInChatSounds } from "../../lib/inChatSounds";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { useAuthStore } from "../../store/authStore";
@@ -214,6 +216,7 @@ export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) =
 	const { messages, isLoading, isConnected, sendMessage } = useGroupChat(journey.journeyId);
 	const playInChatSound = useInChatSounds();
 	const [tripModalOpen, setTripModalOpen] = useState(false);
+	const [membersOpen, setMembersOpen] = useState(false);
 	const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
 	const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
 	const [templateInput, setTemplateInput] = useState("");
@@ -276,6 +279,13 @@ export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) =
 		}
 	}, [currentUserId, messages, playInChatSound]);
 
+	// Fetched only while the sheet is open: boarding status changes during a trip, so a
+	// list cached from the last time it was opened would show stale answers.
+	const { data: members = [], isLoading: membersLoading } = useJourneyMembers(
+		journey.journeyId,
+		membersOpen,
+	);
+
 	const selectTemplate = (template: MessageTemplate) => {
 		if (!isConnected) {
 			return;
@@ -303,7 +313,7 @@ export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) =
 	};
 
 	return (
-		<SafeAreaView style={styles.root} edges={["top"]}>
+		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
 			<KeyboardAvoidingView
 				style={styles.keyboard}
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -351,6 +361,21 @@ export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) =
 						<Text style={[styles.connection, isConnected && styles.connectionLive]}>
 							{isConnected ? "Live" : "Connecting"}
 						</Text>
+					</Pressable>
+
+					<Pressable
+						style={styles.membersButton}
+						onPress={() => setMembersOpen(true)}
+						accessibilityRole="button"
+						accessibilityLabel={`${journey.memberCount} travellers, view members`}
+					>
+						<HugeiconsIcon
+							icon={UserGroupIcon}
+							size={20}
+							strokeWidth={1.8}
+							color={theme.textSecondary}
+						/>
+						<Text style={styles.membersButtonCount}>{journey.memberCount}</Text>
 					</Pressable>
 				</View>
 
@@ -485,6 +510,66 @@ export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) =
 									</Text>
 								</View>
 							</View>
+						</View>
+					</View>
+				</Modal>
+
+				<Modal
+					visible={membersOpen}
+					transparent
+					animationType="slide"
+					onRequestClose={() => setMembersOpen(false)}
+				>
+					<View style={styles.sheetOverlay}>
+						<Pressable style={styles.modalBackdrop} onPress={() => setMembersOpen(false)} />
+						<View style={styles.membersSheet}>
+							<View style={styles.sheetGrabber} />
+							<Text style={styles.sheetTitle}>
+								{members.length > 0
+									? `${members.length} ${members.length === 1 ? "traveller" : "travellers"}`
+									: "Travellers"}
+							</Text>
+
+							{membersLoading ? (
+								<View style={styles.sheetLoading}>
+									<ActivityIndicator size="small" color={brand.teal} />
+								</View>
+							) : (
+								<FlatList
+									data={members}
+									keyExtractor={(item) => item.userId}
+									contentContainerStyle={styles.memberList}
+									ListEmptyComponent={
+										<Text style={styles.sheetEmpty}>No one has joined this journey yet.</Text>
+									}
+									renderItem={({ item }) => (
+										<View style={styles.memberRow}>
+											<GenderAvatar gender={item.gender} />
+
+											<View style={styles.memberText}>
+												<Text style={styles.memberName} numberOfLines={1}>
+													{item.displayName}
+													{item.isYou ? " (You)" : ""}
+												</Text>
+												<Text style={styles.memberMeta} numberOfLines={1}>
+													{[
+														item.isCreator ? "Created this group" : null,
+														item.age ? `${item.age}` : null,
+													]
+														.filter(Boolean)
+														.join(" · ") || "Traveller"}
+												</Text>
+											</View>
+
+											{item.boardingStatus === "boarded" ? (
+												<Text style={[styles.boarding, styles.boardingOn]}>Boarded</Text>
+											) : item.boardingStatus === "not_boarded" ? (
+												<Text style={styles.boarding}>Not boarded</Text>
+											) : null}
+										</View>
+									)}
+								/>
+							)}
 						</View>
 					</View>
 				</Modal>
@@ -753,5 +838,89 @@ const styles = StyleSheet.create({
 	metaText: {
 		fontSize: typography.sm,
 		color: theme.textMuted,
+	},
+	membersButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.xs,
+		paddingHorizontal: spacing.sm,
+		paddingVertical: spacing.xs,
+		borderRadius: radius.full,
+		backgroundColor: theme.surface,
+	},
+	membersButtonCount: {
+		fontSize: typography.sm,
+		fontWeight: typography.bold,
+		color: theme.textSecondary,
+	},
+	sheetOverlay: {
+		flex: 1,
+		justifyContent: "flex-end",
+		backgroundColor: "rgba(13,27,42,0.38)",
+	},
+	membersSheet: {
+		maxHeight: "70%",
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.sm,
+		paddingBottom: spacing.xl,
+		borderTopLeftRadius: radius.lg,
+		borderTopRightRadius: radius.lg,
+		backgroundColor: theme.card,
+	},
+	sheetGrabber: {
+		alignSelf: "center",
+		width: 36,
+		height: 4,
+		borderRadius: radius.full,
+		backgroundColor: theme.border,
+		marginBottom: spacing.sm,
+	},
+	sheetTitle: {
+		fontSize: typography.md,
+		fontWeight: typography.bold,
+		color: theme.textPrimary,
+		marginBottom: spacing.sm,
+	},
+	sheetLoading: {
+		paddingVertical: spacing.xl,
+		alignItems: "center",
+	},
+	sheetEmpty: {
+		paddingVertical: spacing.lg,
+		textAlign: "center",
+		fontSize: typography.base,
+		color: theme.textMuted,
+	},
+	memberList: {
+		gap: spacing.xs,
+	},
+	memberRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		paddingVertical: spacing.sm,
+	},
+	memberText: {
+		flex: 1,
+	},
+	memberName: {
+		fontSize: typography.base,
+		fontWeight: typography.medium,
+		color: theme.textPrimary,
+	},
+	memberMeta: {
+		fontSize: typography.sm,
+		color: theme.textMuted,
+		marginTop: 2,
+	},
+	boarding: {
+		fontSize: typography.xs,
+		fontWeight: typography.bold,
+		color: theme.textMuted,
+		textTransform: "uppercase",
+		letterSpacing: typography.wide,
+	},
+	boardingOn: {
+		color: brand.tealDeep,
 	},
 });

@@ -1,9 +1,9 @@
-import { Bus01Icon, Cancel01Icon, Search01Icon, Train01Icon } from "@hugeicons/core-free-icons";
+import { Bus01Icon, Train01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -21,27 +21,21 @@ import { Fab } from "../components/Fab";
 import { JourneyCard } from "../components/JourneyCard";
 import { ModeSwitcher } from "../components/ModeSwitcher";
 import { type QuickAction, QuickActionsMenu } from "../components/QuickActionsMenu";
+import { JourneySearchForm } from "../components/shared/JourneySearchForm";
+import type { ChatStatus } from "../components/shared/PassengerCard";
+import { PassengersModal } from "../components/shared/PassengersModal";
+import { PassengersSection } from "../components/shared/PassengersSection";
 import { brand, radius, spacing, theme, typography } from "../constants/theme";
-import { useJoinJourney, useJourneys } from "../hooks/useJourneys";
+import { useJoinJourney, useJourneys, usePassengers } from "../hooks/useJourneys";
 import type { MainTabParamList } from "../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useModeStore } from "../store/modeStore";
-import { formatShortDate } from "../utils/date.utils";
 import { CreateJourneyModal } from "./Journeys/CreateJourneyModal";
-import { SearchJourneysModal } from "./Journeys/SearchJourneysModal";
 
 type HomeNavigation = CompositeNavigationProp<
 	BottomTabNavigationProp<MainTabParamList, "Home">,
 	NativeStackNavigationProp<RootStackParamList>
 >;
-
-/** "Hyderabad, Telangana, India" -> "Hyderabad", so the search bar stays readable. */
-const shortPlace = (text: string): string => text.split(",")[0].trim();
-
-const searchSummary = (search: JourneySearch): string =>
-	search.kind === "registration"
-		? search.registrationNumber
-		: `${shortPlace(search.source.text)} → ${shortPlace(search.destination.text)} · ${formatShortDate(search.journeyDate)}`;
 
 export const HomeScreen: React.FC = () => {
 	const navigation = useNavigation<HomeNavigation>();
@@ -49,9 +43,12 @@ export const HomeScreen: React.FC = () => {
 	const modeLabel = mode === "train" ? "train" : "bus";
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [createJourneyOpen, setCreateJourneyOpen] = useState(false);
-	const [searchOpen, setSearchOpen] = useState(false);
 	const [search, setSearch] = useState<JourneySearch | null>(null);
 	const [journeyToJoin, setJourneyToJoin] = useState<JourneyListItem | null>(null);
+	const [passengersOpen, setPassengersOpen] = useState(false);
+	// Local-only for now: tapping Request flips a traveller straight to accepted so both
+	// button states are reachable while the chat_requests endpoints are still to come.
+	const [chatStatuses, setChatStatuses] = useState<Record<string, ChatStatus>>({});
 
 	const {
 		data: journeys,
@@ -63,6 +60,18 @@ export const HomeScreen: React.FC = () => {
 	const { mutate: join, isPending: joining, variables: joiningId } = useJoinJourney();
 	const searchActive = search !== null;
 	const results = journeys ?? [];
+	// Passengers follow whatever the list is showing, so switching mode or searching
+	// narrows the carousel to the people actually on those journeys.
+	const journeyIds = useMemo(() => results.map((item) => item.journeyId), [results]);
+	const { data: passengers = [], isLoading: passengersLoading } = usePassengers(journeyIds);
+
+	const statusFor = (userId: string): ChatStatus => chatStatuses[userId] ?? "none";
+
+	const toggleChatStatus = (userId: string) =>
+		setChatStatuses((current) => ({
+			...current,
+			[userId]: current[userId] === "accepted" ? "none" : "accepted",
+		}));
 
 	const openJourneyChat = (journey: JourneyListItem) => {
 		navigation.navigate("JourneyGroupChat", { journey });
@@ -114,41 +123,8 @@ export const HomeScreen: React.FC = () => {
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top"]}>
-			{/* Fixed above the search bar — always visible, never behind a menu. */}
+			{/* Fixed above the list — always visible, never behind a menu. */}
 			<ModeSwitcher />
-
-			<View style={styles.searchWrap}>
-				<Pressable
-					style={styles.search}
-					onPress={() => setSearchOpen(true)}
-					accessibilityRole="search"
-					accessibilityLabel={`Search ${modeLabel} journeys`}
-				>
-					<HugeiconsIcon icon={Search01Icon} size={18} strokeWidth={1.8} color={theme.textMuted} />
-					<Text
-						style={[styles.searchText, !searchActive && styles.searchPlaceholder]}
-						numberOfLines={1}
-					>
-						{search ? searchSummary(search) : `Search by route or ${modeLabel} number`}
-					</Text>
-					{searchActive ? (
-						<Pressable
-							style={styles.clearSearchButton}
-							onPress={() => setSearch(null)}
-							accessibilityRole="button"
-							accessibilityLabel="Clear search"
-							hitSlop={8}
-						>
-							<HugeiconsIcon
-								icon={Cancel01Icon}
-								size={16}
-								strokeWidth={1.8}
-								color={theme.textMuted}
-							/>
-						</Pressable>
-					) : null}
-				</Pressable>
-			</View>
 
 			{isLoading ? (
 				<View style={styles.centered}>
@@ -164,10 +140,32 @@ export const HomeScreen: React.FC = () => {
 						<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={brand.teal} />
 					}
 					ListHeaderComponent={
-						<Text style={styles.sectionTitle}>
-							{searchActive ? "Matching" : "Upcoming"} {modeLabel} journeys
-							{results.length ? ` (${results.length})` : ""}
-						</Text>
+						<>
+							<JourneySearchForm
+								mode={mode}
+								current={search}
+								onApply={setSearch}
+								onClear={() => setSearch(null)}
+							/>
+
+							{/* Rendered edge-to-edge so the carousel scrolls past the list gutter; the
+							    section pads its own contents back into alignment. */}
+							<View style={styles.bleed}>
+								<PassengersSection
+									members={passengers}
+									isLoading={passengersLoading}
+									statusFor={statusFor}
+									onRequestChat={(passenger) => toggleChatStatus(passenger.userId)}
+									onOpenChat={(passenger) => toggleChatStatus(passenger.userId)}
+									onViewAll={() => setPassengersOpen(true)}
+								/>
+							</View>
+
+							<Text style={styles.sectionTitle}>
+								{searchActive ? "Matching" : "Upcoming"} {modeLabel} journeys
+								{results.length ? ` (${results.length})` : ""}
+							</Text>
+						</>
 					}
 					renderItem={({ item }) => (
 						<JourneyCard
@@ -285,22 +283,17 @@ export const HomeScreen: React.FC = () => {
 				</View>
 			</Modal>
 
-			<CreateJourneyModal visible={createJourneyOpen} onClose={() => setCreateJourneyOpen(false)} />
-
-			<SearchJourneysModal
-				visible={searchOpen}
-				mode={mode}
-				current={search}
-				onClose={() => setSearchOpen(false)}
-				onApply={(next) => {
-					setSearch(next);
-					setSearchOpen(false);
-				}}
-				onClear={() => {
-					setSearch(null);
-					setSearchOpen(false);
-				}}
+			<PassengersModal
+				visible={passengersOpen}
+				members={passengers}
+				isLoading={passengersLoading}
+				statusFor={statusFor}
+				onRequestChat={(passenger) => toggleChatStatus(passenger.userId)}
+				onOpenChat={(passenger) => toggleChatStatus(passenger.userId)}
+				onClose={() => setPassengersOpen(false)}
 			/>
+
+			<CreateJourneyModal visible={createJourneyOpen} onClose={() => setCreateJourneyOpen(false)} />
 		</SafeAreaView>
 	);
 };
@@ -310,35 +303,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: theme.background,
 	},
-	searchWrap: {
-		paddingHorizontal: spacing.xl,
-		paddingBottom: spacing.md,
-	},
-	search: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: spacing.sm,
-		height: 44,
-		paddingHorizontal: spacing.md,
-		borderRadius: radius.md,
-		backgroundColor: theme.inputBackground,
-		borderWidth: 1,
-		borderColor: theme.inputBorder,
-	},
-	searchText: {
-		flex: 1,
-		fontSize: typography.base,
-		color: theme.textPrimary,
-	},
-	searchPlaceholder: {
-		color: theme.textMuted,
-	},
-	clearSearchButton: {
-		width: 28,
-		height: 28,
-		alignItems: "center",
-		justifyContent: "center",
-	},
 	centered: {
 		flex: 1,
 		alignItems: "center",
@@ -346,10 +310,16 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		paddingHorizontal: spacing.xl,
+		// The search form is the first thing in the list header, so the breathing room the
+		// old search bar had above it now belongs to the list itself.
+		paddingTop: spacing.md,
 		// Clears the FAB (56px tall, spacing.xl from the bottom) so the last card in a
 		// scrolled list is never hidden behind it.
 		paddingBottom: 56 + spacing.xl * 2,
 		gap: spacing.md,
+	},
+	bleed: {
+		marginHorizontal: -spacing.xl,
 	},
 	sectionTitle: {
 		fontSize: typography.md,

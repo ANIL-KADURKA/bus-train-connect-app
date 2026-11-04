@@ -1,3 +1,5 @@
+import type { ErrorCode } from "../types/error.type";
+
 export const ERROR_CODES = {
 	INVALID_PHONE: "INVALID_PHONE",
 	INVALID_OTP: "INVALID_OTP",
@@ -111,7 +113,58 @@ export const getFirebaseAuthErrorCode = (error: unknown): FirebaseAuthErrorCode 
 	return typeof code === "string" && isFirebaseAuthErrorCode(code) ? code : undefined;
 };
 
+/**
+ * Axios-shaped errors carry a transport `code` (ERR_NETWORK, ECONNABORTED) and/or an HTTP
+ * response. Mapping them explicitly keeps genuinely unknown failures rare enough to be a
+ * useful signal, instead of collapsing every backend outage into "Unexpected error occurred".
+ */
+export const getApiErrorCode = (error: unknown): ErrorCode | undefined => {
+	if (typeof error !== "object" || error === null) {
+		return undefined;
+	}
+
+	const { code, response, message } = error as {
+		code?: unknown;
+		response?: { status?: number; data?: { code?: ErrorCode } };
+		message?: unknown;
+	};
+
+	if (response) {
+		if (response.data?.code) {
+			return response.data.code;
+		}
+
+		const status = response.status ?? 0;
+
+		if (status === 401) {
+			return ERROR_CODES.UNAUTHORIZED;
+		}
+
+		if (status === 403) {
+			return ERROR_CODES.FORBIDDEN;
+		}
+
+		if (status === 404) {
+			return ERROR_CODES.USER_NOT_FOUND;
+		}
+
+		return ERROR_CODES.SERVER_ERROR;
+	}
+
+	// No response at all: the request never reached the backend.
+	if (
+		code === "ERR_NETWORK" ||
+		code === "ECONNABORTED" ||
+		code === "ETIMEDOUT" ||
+		message === ERROR_RESPONSE_MESSAGES[ERROR_CODES.NETWORK_ERROR]
+	) {
+		return ERROR_CODES.NETWORK_ERROR;
+	}
+
+	return undefined;
+};
+
 export const getFirebaseAuthErrorMessage = (error: unknown): string => {
-	const code = getFirebaseAuthErrorCode(error);
+	const code = getFirebaseAuthErrorCode(error) ?? getApiErrorCode(error);
 	return code ? ERROR_MESSAGES[code] : ERROR_MESSAGES[ERROR_CODES.UNKNOWN];
 };

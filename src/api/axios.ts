@@ -1,11 +1,23 @@
 import axios, { type AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 import { firebaseAuth } from "../lib/firebase";
 
+/** Expo inlines EXPO_PUBLIC_* at build time, so this must be a literal member access. */
+const baseURL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!baseURL) {
+	throw new Error(
+		"Missing EXPO_PUBLIC_API_URL. Point it at the backend and restart the dev server with `--clear`.",
+	);
+}
+
 export const api = axios.create({
-	baseURL: "https://b4a8-2409-40f0-6415-6638-813e-116d-18bb-6ae9.ngrok-free.app",
+	baseURL,
 	timeout: 10_000,
 	headers: {
 		"Content-Type": "application/json",
+		// ngrok's free tier serves an HTML interstitial to unknown user agents, which would
+		// surface as a JSON parse failure rather than a real API error. This opts out.
+		"ngrok-skip-browser-warning": "true",
 	},
 });
 

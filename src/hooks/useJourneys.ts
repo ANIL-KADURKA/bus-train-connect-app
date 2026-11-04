@@ -10,9 +10,13 @@ import {
 	type CreateJourneyResult,
 	createJourney,
 	type JourneyListItem,
+	type JourneyMember,
 	type JourneySearch,
 	joinJourney,
+	listJourneyMembers,
 	listJourneys,
+	listPassengers,
+	type Passenger,
 } from "../api/journeys";
 import type { TransportMode } from "../store/modeStore";
 import { useFirebaseAuth } from "./useUser";
@@ -41,6 +45,10 @@ export const journeyKeys = {
 	list: (transportType: TransportMode, search?: JourneySearch) =>
 		[...journeyKeys.all, "list", transportType, searchKey(search)] as const,
 	allList: () => [...journeyKeys.all, "list", "all", null] as const,
+	members: (journeyId: string) => [...journeyKeys.all, "members", journeyId] as const,
+	// Sorted so the same set of journeys in a different order reuses one cache entry.
+	passengers: (journeyIds: string[]) =>
+		[...journeyKeys.all, "passengers", [...journeyIds].sort().join(",")] as const,
 };
 
 /**
@@ -87,6 +95,37 @@ export const useCreateJourney = (): UseMutationResult<
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: journeyKeys.all });
 		},
+	});
+};
+
+/**
+ * GET /journeys/:id/members — everyone travelling on this journey.
+ *
+ * `enabled` gates on more than auth: the endpoint requires membership, so firing it
+ * before the caller has joined would 403 and cache the failure. Callers pass false
+ * while the members sheet is closed to keep the list fresh on each open.
+ */
+export const useJourneyMembers = (
+	journeyId: string,
+	enabled = true,
+): UseQueryResult<JourneyMember[]> => {
+	const { uid, ready } = useFirebaseAuth();
+
+	return useQuery({
+		queryKey: journeyKeys.members(journeyId),
+		queryFn: () => listJourneyMembers(journeyId),
+		enabled: enabled && ready && uid !== null,
+	});
+};
+
+/** GET /journeys/passengers — distinct travellers across the journeys on screen. */
+export const usePassengers = (journeyIds: string[]): UseQueryResult<Passenger[]> => {
+	const { uid, ready } = useFirebaseAuth();
+
+	return useQuery({
+		queryKey: journeyKeys.passengers(journeyIds),
+		queryFn: () => listPassengers(journeyIds),
+		enabled: ready && uid !== null && journeyIds.length > 0,
 	});
 };
 

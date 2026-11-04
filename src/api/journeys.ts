@@ -120,6 +120,52 @@ export const joinJourney = async (journeyId: string): Promise<void> => {
 	await api.post(`/journeys/${journeyId}/members`);
 };
 
+export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
+
+export interface Passenger {
+	userId: string;
+	/** Already resolved against a hidden profile — render it as-is. */
+	displayName: string;
+	/** Presigned and short-lived, so don't persist it. Absent for hidden profiles. */
+	profilePhotoUrl?: string;
+	gender?: Gender;
+	age?: number;
+	isProfileHidden: boolean;
+	isYou: boolean;
+}
+
+/** A passenger plus the facts that only mean something inside one journey. */
+export interface JourneyMember extends Passenger {
+	/** Undefined until the traveller answers the "did you board?" prompt. */
+	boardingStatus?: "boarded" | "not_boarded";
+	joinedAt: string;
+	isCreator: boolean;
+}
+
+export const listJourneyMembers = async (journeyId: string): Promise<JourneyMember[]> => {
+	const { data } = await api.get<JourneyMember[]>(`/journeys/${journeyId}/members`);
+
+	return data;
+};
+
+/**
+ * Distinct travellers across the given journeys, deduped and with you removed.
+ *
+ * IDs go as one comma-separated value because the backend reads a single string —
+ * axios' array serialisation (`journeyIds[]=`) would not match it.
+ */
+export const listPassengers = async (journeyIds: string[]): Promise<Passenger[]> => {
+	if (journeyIds.length === 0) {
+		return [];
+	}
+
+	const { data } = await api.get<Passenger[]>("/journeys/passengers", {
+		params: { journeyIds: journeyIds.join(",") },
+	});
+
+	return data;
+};
+
 export interface CreateJourneyResult {
 	journey: Journey;
 	/** True when someone had already created this vehicle+date+origin and we joined it. */
