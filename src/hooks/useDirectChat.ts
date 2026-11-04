@@ -6,6 +6,7 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import type { ChatRequest } from "../api/chatRequests";
 import {
 	acceptDirectChat,
 	type DirectChat,
@@ -13,6 +14,7 @@ import {
 	declineDirectChat,
 	getDirectChat,
 	listDirectMessages,
+	markDirectChatRead,
 	sendDirectMessage,
 } from "../api/directChats";
 import { chatRequestKeys } from "./useChatRequests";
@@ -90,6 +92,30 @@ const useChatDecision = (
 			queryClient.setQueryData(directChatKeys.chat(chat.chatId), chat);
 			return queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
 		},
+	});
+};
+
+/**
+ * POST /chats/:id/read. Zeroes the chat's unread count in the inbox straight away rather
+ * than waiting for the refetch, so the badge doesn't flash a count you're looking at.
+ */
+export const useMarkDirectChatRead = (): UseMutationResult<
+	{ readCount: number },
+	Error,
+	string
+> => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: markDirectChatRead,
+		onMutate: (chatId) => {
+			queryClient.setQueryData<ChatRequest[]>(chatRequestKeys.all, (requests) =>
+				requests?.map((request) =>
+					request.chatId === chatId ? { ...request, unreadCount: 0 } : request,
+				),
+			);
+		},
+		onSettled: () => queryClient.invalidateQueries({ queryKey: chatRequestKeys.all }),
 	});
 };
 

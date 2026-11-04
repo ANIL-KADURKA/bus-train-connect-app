@@ -1,8 +1,8 @@
 import type { FC } from "react";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
-import { type ConfirmOptions, useConfirmStore } from "../../store/confirmStore";
+import type { ConfirmOptions } from "../../store/confirmStore";
 
 interface ConfirmModalProps extends Omit<ConfirmOptions, "onConfirm"> {
 	visible: boolean;
@@ -56,52 +56,6 @@ export const ConfirmModal: FC<ConfirmModalProps> = ({
 		</View>
 	</Modal>
 );
-
-let nextHostId = 0;
-
-/**
- * Renders whatever `confirm()` asked for. Mount one at the app root, and one inside any
- * screen-level Modal that wants confirms while it is open.
- *
- * Why more than one: iOS cannot present a Modal while another Modal is showing unless it
- * is nested inside it, so a dialog rendered only at the root would silently fail to appear
- * over, say, the Passengers sheet. Hosts register on mount and only the innermost (most
- * recently mounted) one renders — a Modal's children only mount while it is visible, so
- * the host inside the topmost open Modal is always the one that draws.
- */
-export const ConfirmModalHost: FC = () => {
-	const id = useRef(++nextHostId).current;
-	const request = useConfirmStore((state) => state.request);
-	const isTop = useConfirmStore((state) => state.hosts[state.hosts.length - 1] === id);
-	const close = useConfirmStore((state) => state.close);
-
-	useEffect(() => {
-		const { registerHost, unregisterHost } = useConfirmStore.getState();
-		registerHost(id);
-
-		return () => unregisterHost(id);
-	}, [id]);
-
-	if (!isTop || !request) {
-		return null;
-	}
-
-	return (
-		<ConfirmModal
-			visible
-			title={request.title}
-			message={request.message}
-			confirmLabel={request.confirmLabel}
-			cancelLabel={request.cancelLabel}
-			tone={request.tone}
-			onCancel={close}
-			onConfirm={() => {
-				close();
-				request.onConfirm();
-			}}
-		/>
-	);
-};
 
 const styles = StyleSheet.create({
 	overlay: {

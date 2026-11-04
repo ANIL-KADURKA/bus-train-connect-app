@@ -55,6 +55,13 @@ export const declineDirectChat = async (chatId: string): Promise<DirectChat> => 
 	return data;
 };
 
+/** Marks everything they sent you in this chat as read. */
+export const markDirectChatRead = async (chatId: string): Promise<{ readCount: number }> => {
+	const { data } = await api.post<{ readCount: number }>(`/chats/${chatId}/read`);
+
+	return data;
+};
+
 /** Undoes your own decline. The chat only reopens if the other person hasn't declined too. */
 export const acceptDirectChat = async (chatId: string): Promise<DirectChat> => {
 	const { data } = await api.post<DirectChat>(`/chats/${chatId}/accept`);

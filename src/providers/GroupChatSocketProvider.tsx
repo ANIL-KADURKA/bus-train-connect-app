@@ -3,14 +3,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { api } from "../api/axios";
+import type { ChatRequest } from "../api/chatRequests";
 import type { DirectMessage } from "../api/directChats";
 import type { GroupMessage } from "../api/groupMessages";
-import { chatRequestKeys } from "../hooks/useChatRequests";
+import { chatRequestKeys, useChatRequests } from "../hooks/useChatRequests";
 import { directChatKeys, mergeDirectMessage } from "../hooks/useDirectChat";
 import { useAllJourneys } from "../hooks/useJourneys";
 import { firebaseAuth } from "../lib/firebase";
 import { groupMessageKeys, mergeGroupMessage } from "../lib/groupMessagesCache";
 import { useAuthStore } from "../store/authStore";
+import { useDirectChatStore } from "../store/directChatStore";
 import { useGroupChatStore } from "../store/groupChatStore";
 
 const socketUrl = String(api.defaults.baseURL ?? "").replace(/\/$/, "");
@@ -38,6 +40,9 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 	const queryClient = useQueryClient();
 	const currentUserId = useAuthStore((state) => state.user?.userId);
 	const { data: journeys } = useAllJourneys();
+	// Mounted for the whole signed-in session so the tab bar's chat badges stay live on
+	// every screen, not only while Home or Chats happens to be rendered.
+	useChatRequests();
 	const [socket, setSocket] = useState<Socket | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
 	const [joinedJourneyIds, setJoinedJourneyIds] = useState<Set<string>>(new Set());
@@ -75,6 +80,30 @@ export const GroupChatSocketProvider: React.FC<React.PropsWithChildren> = ({ chi
 			});
 			nextSocket.on("dm:message", (message: DirectMessage) => {
 				mergeDirectMessage(queryClient, message);
+
+				// Update the inbox line in place instead of refetching the whole list per message.
+				// A message into the chat you're looking at isn't unread; that screen marks it read.
+				const incoming = message.senderId !== currentUserId;
+				const onScreen = useDirectChatStore.getState().activeChatId === message.chatId;
+				queryClient.setQueryData<ChatRequest[]>(chatRequestKeys.all, (requests) =>
+					requests?.map((request) =>
+						request.chatId === message.chatId
+							? {
+									...request,
+									lastMessage: {
+										text: message.text,
+										sentAt: message.sentAt,
+										senderId: message.senderId,
+									},
+									unreadCount: (request.unreadCount ?? 0) + (incoming && !onScreen ? 1 : 0),
+								}
+							: request,
+					),
+				);
+			});
+			// You read the chat on another device (or they read yours): resync unread counts.
+			nextSocket.on("dm:read", () => {
+				queryClient.invalidateQueries({ queryKey: chatRequestKeys.all });
 			});
 			// Either person declined or reopened: the chat's canMessage and the list labels change.
 			nextSocket.on("dm:chat-updated", ({ chatId }: { chatId: string }) => {

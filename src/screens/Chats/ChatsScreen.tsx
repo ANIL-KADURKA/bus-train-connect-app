@@ -15,6 +15,7 @@ import { useChatRequests } from "../../hooks/useChatRequests";
 import { useAllJourneys } from "../../hooks/useJourneys";
 import type { MainTabParamList } from "../../navigation/MainTabNavigator";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
+import { useAuthStore } from "../../store/authStore";
 import { useBadgeStore } from "../../store/badgeStore";
 import { useGroupChatStore } from "../../store/groupChatStore";
 
@@ -43,6 +44,26 @@ const EmptyState: React.FC<{ title: string; body: string }> = ({ title, body }) 
 	</View>
 );
 
+const lastActivity = (chat: ChatRequest): number =>
+	new Date(chat.lastMessage?.sentAt ?? chat.respondedAt ?? chat.createdAt).getTime();
+
+/** "4:05 PM" for today, "Yesterday", otherwise a short date — the usual inbox convention. */
+const inboxTime = (iso: string): string => {
+	const sent = new Date(iso);
+	const today = new Date();
+	const yesterday = new Date(today);
+	yesterday.setDate(today.getDate() - 1);
+
+	if (sent.toDateString() === today.toDateString()) {
+		return sent.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+	}
+	if (sent.toDateString() === yesterday.toDateString()) {
+		return "Yesterday";
+	}
+
+	return sent.toLocaleDateString([], { day: "numeric", month: "short" });
+};
+
 export const ChatsScreen: React.FC = () => {
 	const navigation = useNavigation<ChatsNavigation>();
 	const [tab, setTab] = useState<ChatsTab>("journeys");
@@ -51,14 +72,28 @@ export const ChatsScreen: React.FC = () => {
 	const { data: journeys, isLoading: journeysLoading } = useAllJourneys();
 
 	const { data: requests = [] } = useChatRequests();
+	const currentUserId = useAuthStore((state) => state.user?.userId);
 
 	const journeyChats = (journeys ?? []).filter((journey) => journey.isMember);
 	// Every accepted request is a private chat, including ones since declined — those stay
-	// listed (history is still readable) and say so in their subtitle.
-	const directChats = requests.filter(
-		(request): request is ChatRequest & { chatId: string } =>
-			request.status === "accepted" && Boolean(request.chatId),
-	);
+	// listed (history is still readable) and say so in their subtitle. Most recent activity
+	// first; a chat with no messages yet sorts by when it was accepted.
+	const directChats = requests
+		.filter(
+			(request): request is ChatRequest & { chatId: string } =>
+				request.status === "accepted" && Boolean(request.chatId),
+		)
+		.sort((left, right) => lastActivity(right) - lastActivity(left));
+
+	const dmSubtitle = (chat: ChatRequest): string => {
+		if (chat.declinedByMe) return "You declined this chat";
+		if (chat.declinedByThem) return "Messaging paused";
+		if (!chat.lastMessage) return "Say hello";
+
+		return chat.lastMessage.senderId === currentUserId
+			? `You: ${chat.lastMessage.text}`
+			: chat.lastMessage.text;
+	};
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top"]}>
@@ -103,13 +138,9 @@ export const ChatsScreen: React.FC = () => {
 					renderItem={({ item }) => (
 						<ConversationRow
 							title={item.otherUser.displayName}
-							subtitle={
-								item.declinedByMe
-									? "You declined this chat"
-									: item.declinedByThem
-										? "Messaging paused"
-										: "Tap to chat"
-							}
+							subtitle={dmSubtitle(item)}
+							timestamp={item.lastMessage ? inboxTime(item.lastMessage.sentAt) : undefined}
+							unreadCount={item.unreadCount ?? 0}
 							avatarUrl={item.otherUser.profilePhotoUrl}
 							onPress={() =>
 								navigation.navigate("DirectChat", {

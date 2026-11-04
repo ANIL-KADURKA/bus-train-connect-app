@@ -13,21 +13,14 @@ export interface ConfirmOptions {
 
 interface ConfirmState {
 	request: ConfirmOptions | null;
-	/** Mounted hosts, innermost last — see ConfirmModalHost. */
-	hosts: number[];
 	open: (options: ConfirmOptions) => void;
 	close: () => void;
-	registerHost: (id: number) => void;
-	unregisterHost: (id: number) => void;
 }
 
 export const useConfirmStore = create<ConfirmState>((set) => ({
 	request: null,
-	hosts: [],
 	open: (request) => set({ request }),
 	close: () => set({ request: null }),
-	registerHost: (id) => set((state) => ({ hosts: [...state.hosts, id] })),
-	unregisterHost: (id) => set((state) => ({ hosts: state.hosts.filter((host) => host !== id) })),
 }));
 
 /**
@@ -36,6 +29,6 @@ export const useConfirmStore = create<ConfirmState>((set) => ({
  *   confirm({ title: "Withdraw request?", confirmLabel: "Withdraw", tone: "destructive",
  *             onConfirm: () => withdraw(id) });
  *
- * Cancelling just closes it. Rendering is done by ConfirmModalHost.
+ * Cancelling just closes it. Rendering is done by OverlayHost.
  */
 export const confirm = (options: ConfirmOptions): void => useConfirmStore.getState().open(options);

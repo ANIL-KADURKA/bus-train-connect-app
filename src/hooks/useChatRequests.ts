@@ -33,14 +33,16 @@ export const useChatRequests = (): UseQueryResult<ChatRequest[]> => {
 		enabled: ready && uid !== null,
 	});
 
-	// The tab bar and Chats screen already read this counter; feed it from the real list.
-	const incomingPending = (query.data ?? []).filter(
+	// The tab bar and Chats screen already read these counters; feed them from the real list.
+	const requests = query.data ?? [];
+	const incomingPending = requests.filter(
 		(request) => request.direction === "incoming" && request.status === "pending",
 	).length;
+	const dmUnread = requests.reduce((sum, request) => sum + (request.unreadCount ?? 0), 0);
 
 	useEffect(() => {
-		useBadgeStore.getState().setBadges({ pendingChatRequests: incomingPending });
-	}, [incomingPending]);
+		useBadgeStore.getState().setBadges({ pendingChatRequests: incomingPending, dmUnread });
+	}, [incomingPending, dmUnread]);
 
 	return query;
 };

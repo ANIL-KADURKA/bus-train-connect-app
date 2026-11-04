@@ -1,8 +1,9 @@
 import { ArrowLeft01Icon, SentIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useIsFocused } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { FC } from "react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -25,11 +26,13 @@ import {
 	useDeclineDirectChat,
 	useDirectChat,
 	useDirectMessages,
+	useMarkDirectChatRead,
 	useSendDirectMessage,
 } from "../../hooks/useDirectChat";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { useAuthStore } from "../../store/authStore";
 import { confirm } from "../../store/confirmStore";
+import { useDirectChatStore } from "../../store/directChatStore";
 import { getApiErrorMessage } from "../../utils/errorhandler.utils";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DirectChat">;
@@ -48,6 +51,30 @@ export const DirectChatScreen: FC<Props> = ({ navigation, route }) => {
 	const decline = useDeclineDirectChat();
 	const accept = useAcceptDirectChat();
 	const [draft, setDraft] = useState("");
+	const markRead = useMarkDirectChatRead();
+	const { mutate: markChatRead } = markRead;
+	const isFocused = useIsFocused();
+
+	// While this chat is on screen, its incoming messages count as read: tell the socket
+	// handler not to bump the unread badge for it.
+	useEffect(() => {
+		if (!isFocused) return;
+
+		useDirectChatStore.getState().setActiveChatId(chatId);
+		return () => useDirectChatStore.getState().setActiveChatId(null);
+	}, [isFocused, chatId]);
+
+	// Mark read on open, and again whenever something new arrives from them while you watch.
+	const latestIncomingId = useMemo(
+		() => [...messages].reverse().find((message) => message.senderId !== currentUserId)?.messageId,
+		[messages, currentUserId],
+	);
+
+	useEffect(() => {
+		if (isFocused && latestIncomingId) {
+			markChatRead(chatId);
+		}
+	}, [isFocused, latestIncomingId, chatId, markChatRead]);
 
 	// The route carries the person so the header renders before the chat has loaded.
 	const person = chat?.otherUser ?? previewUser;

@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import type { ProfileImageInput } from "../../api/users";
 import { Field } from "../../components/shared/Field";
+import { OverlayHost } from "../../components/shared/OverlayHost";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
 import type { AuthUserDto } from "../../dto/user.dto";
 import { useUpdateProfile } from "../../hooks/useUser";
@@ -273,6 +274,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ visible, use
 					</View>
 				</KeyboardAvoidingView>
 			</View>
+			{/* iOS can't stack a sibling Modal over this one; overlays must render inside it. */}
+			<OverlayHost />
 		</Modal>
 	);
 };

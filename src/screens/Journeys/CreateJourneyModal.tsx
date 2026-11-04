@@ -15,6 +15,7 @@ import {
 	View,
 } from "react-native";
 import { Field } from "../../components/shared/Field";
+import { OverlayHost } from "../../components/shared/OverlayHost";
 import { PlaceInput, type SelectedPlace } from "../../components/shared/PlaceInput";
 import { SegmentedControl, type SegmentOption } from "../../components/shared/SegmentedControl";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
@@ -282,6 +283,8 @@ export const CreateJourneyModal: React.FC<CreateJourneyModalProps> = ({ visible,
 					</View>
 				</KeyboardAvoidingView>
 			</View>
+			{/* iOS can't stack a sibling Modal over this one; overlays must render inside it. */}
+			<OverlayHost />
 		</Modal>
 	);
 };

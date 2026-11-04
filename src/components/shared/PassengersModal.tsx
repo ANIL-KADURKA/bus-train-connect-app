@@ -15,7 +15,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import type { Passenger } from "../../api/journeys";
 import { brand, radius, spacing, theme, typography } from "../../constants/theme";
-import { ConfirmModalHost } from "./ConfirmModal";
+import { OverlayHost } from "./OverlayHost";
 import { type ChatStatus, PassengerCard } from "./PassengerCard";
 import { SegmentedControl, type SegmentOption } from "./SegmentedControl";
 
@@ -176,8 +176,8 @@ export const PassengersModal: FC<Props> = ({
 						/>
 					)}
 				</SafeAreaView>
-				{/* iOS can't stack a sibling Modal over this one; confirms must render inside it. */}
-				<ConfirmModalHost />
+				{/* iOS can't stack a sibling Modal over this one; overlays must render inside it. */}
+				<OverlayHost />
 			</SafeAreaProvider>
 		</Modal>
 	);

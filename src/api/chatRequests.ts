@@ -22,6 +22,10 @@ export interface ChatRequest {
 	/** Set with chatId: whether each side has since declined that chat. */
 	declinedByMe?: boolean;
 	declinedByThem?: boolean;
+	/** Set with chatId: the chat's line in the DM inbox. */
+	lastMessage?: { text: string; sentAt: string; senderId: string };
+	/** Messages from them you haven't opened. */
+	unreadCount?: number;
 }
 
 /** Pending and accepted requests on either side of you, newest first. */
