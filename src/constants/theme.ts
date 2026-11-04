@@ -11,7 +11,7 @@
 // ==============================
 
 export const brand = {
-	// teal: "#00C9A7",	
+	// teal: "#00C9A7",
 	teal: "#128C7E",
 	tealDeep: "#007A67",
 	tealMuted: "rgba(0,201,167,0.12)",

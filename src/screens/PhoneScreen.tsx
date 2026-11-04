@@ -1,7 +1,6 @@
 import type { ApplicationVerifier, ConfirmationResult } from "@firebase/auth";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import type { FC } from "react";
 import React, { useRef, useState } from "react";
 import {
@@ -18,12 +17,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { sendOtp } from "../api/auth";
+import { type RecaptchaHandle, RecaptchaVerifier } from "../components/RecaptchaVerifier";
 import { TransitHero } from "../components/TrainBusHero";
 import { getFirebaseAuthErrorMessage } from "../constants/error.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
 import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
-import { firebaseConfig } from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useAuthStore } from "../store/authStore";
 import { sanitizePhoneNumber, validatePhoneNumber } from "../utils/phone.utils";
@@ -36,7 +35,7 @@ const country_code = default_country.code;
 
 export const PhoneScreen: FC<Props> = ({ navigation }) => {
 	const [phone, setPhone] = useState("");
-	const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
+	const recaptchaVerifier = useRef<RecaptchaHandle>(null);
 	const { setConfirmation, setPhone: storePhone } = useAuthStore();
 
 	const { mutate, isPending } = useMutation<
@@ -73,11 +72,7 @@ export const PhoneScreen: FC<Props> = ({ navigation }) => {
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-			<FirebaseRecaptchaVerifierModal
-				ref={recaptchaVerifier}
-				firebaseConfig={firebaseConfig}
-				attemptInvisibleVerification
-			/>
+			<RecaptchaVerifier ref={recaptchaVerifier} />
 			<KeyboardAvoidingView
 				behavior={Platform.OS === platform.IOS ? "padding" : "height"}
 				style={styles.root}

@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { type ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
@@ -209,7 +209,7 @@ const renderTemplate = (template: MessageTemplate, values: Record<string, string
 
 export const JourneyGroupChatScreen: React.FC<Props> = ({ navigation, route }) => {
 	const { journey } = route.params;
-	const templateInputRef = useRef<TextInput>(null);
+	const templateInputRef = useRef<ComponentRef<typeof TextInput>>(null);
 	const seenMessageIdsRef = useRef<Set<string>>(new Set());
 	const didPrimeSoundTrackingRef = useRef(false);
 	const currentUserId = useAuthStore((state) => state.user?.userId);
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(13,27,42,0.38)",
 	},
 	modalBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	tripModal: {
 		width: "100%",

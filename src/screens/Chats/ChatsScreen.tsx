@@ -128,7 +128,7 @@ export const ChatsScreen: React.FC = () => {
 								</Text>
 								<Badge count={pendingChatRequests} />
 							</Pressable>
-						) : null
+						) : undefined
 					}
 					ListEmptyComponent={
 						<EmptyState

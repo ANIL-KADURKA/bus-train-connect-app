@@ -137,7 +137,13 @@ export const HomeScreen: React.FC = () => {
 					contentContainerStyle={styles.content}
 					showsVerticalScrollIndicator={false}
 					refreshControl={
-						<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={brand.teal} />
+						<RefreshControl
+							refreshing={isRefetching}
+							onRefresh={() => {
+								refetch();
+							}}
+							tintColor={brand.teal}
+						/>
 					}
 					ListHeaderComponent={
 						<>
@@ -354,7 +360,7 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(13,27,42,0.38)",
 	},
 	modalBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	joinModal: {
 		width: "100%",

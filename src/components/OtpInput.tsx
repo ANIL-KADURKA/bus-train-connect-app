@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { type ComponentRef, useRef } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { brand, isDarkMode, radius, theme } from "../constants/theme";
 
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export const OtpInput: React.FC<Props> = ({ value, onChange, disabled }) => {
-	const ref = useRef<TextInput>(null);
+	const ref = useRef<ComponentRef<typeof TextInput>>(null);
 	const digits = Array.from({ length: OTP_LEN }, (_, i) => value[i] ?? "");
 
 	return (

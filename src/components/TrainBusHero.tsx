@@ -24,7 +24,7 @@ interface TransitHeroProps {
 
 /** Detailed city skyline silhouette */
 const CitySkyline: React.FC = () => (
-	<Svg width={300} height={55} viewBox="0 0 300 55" style={StyleSheet.absoluteFillObject}>
+	<Svg width={300} height={55} viewBox="0 0 300 55" style={StyleSheet.absoluteFill}>
 		{/* Left cluster */}
 		<Rect
 			x={10}

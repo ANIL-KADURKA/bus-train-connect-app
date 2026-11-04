@@ -1,7 +1,6 @@
 import type { ApplicationVerifier, ConfirmationResult } from "@firebase/auth";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import type { FC } from "react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -18,13 +17,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { sendOtp, verifyOtp } from "../api/auth";
 import { OtpInput } from "../components/OtpInput";
+import { type RecaptchaHandle, RecaptchaVerifier } from "../components/RecaptchaVerifier";
 import { getFirebaseAuthErrorMessage } from "../constants/error.constants";
 import { RESEND_SEC } from "../constants/otp.constants";
 import { default_country } from "../constants/phone.constants";
 import { platform } from "../constants/platform.constants";
 import { brand, isDarkMode, radius, spacing, theme, typography } from "../constants/theme";
 import { userKeys } from "../hooks/useUser";
-import { firebaseConfig } from "../lib/firebase";
 import type { RootStackParamList } from "../navigation/RootNavigator";
 import { useAuthStore } from "../store/authStore";
 import { sanitizePhoneNumber } from "../utils/phone.utils";
@@ -38,7 +37,7 @@ const country_code = default_country.code;
 export const OtpScreen: FC<Props> = ({ navigation }) => {
 	const [otp, setOtp] = useState("");
 	const [countdown, setCountdown] = useState(RESEND_SEC);
-	const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
+	const recaptchaVerifier = useRef<RecaptchaHandle>(null);
 	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const { confirmation, phone, setUser, setConfirmation } = useAuthStore();
 	const queryClient = useQueryClient();
@@ -142,11 +141,7 @@ export const OtpScreen: FC<Props> = ({ navigation }) => {
 
 	return (
 		<SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-			<FirebaseRecaptchaVerifierModal
-				ref={recaptchaVerifier}
-				firebaseConfig={firebaseConfig}
-				attemptInvisibleVerification
-			/>
+			<RecaptchaVerifier ref={recaptchaVerifier} />
 			<KeyboardAvoidingView
 				behavior={Platform.OS === platform.IOS ? "padding" : "height"}
 				style={styles.root}
